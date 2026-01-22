@@ -4,7 +4,7 @@ trigger:
 - main
 
 pool:
-  vmImage: 'macos-latest'  # iOS 빌드를 위해 반드시 macos를 사용해야 합니다.
+  vmImage: 'codify-self-host-ci-cd'
 
 steps:
 # 1. Flutter SDK 설치 (가장 안정적인 방법: git clone)
