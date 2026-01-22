@@ -10,6 +10,7 @@ import 'outfit_detail_screen.dart';
 import '../providers/recommendation_provider.dart';
 
 import '../services/api_service.dart';
+import '../utils/responsive_helper.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -86,101 +87,142 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isWeb = ResponsiveHelper.isWeb(context);
+
     return Scaffold(
       body: Stack(
         children: [
           CustomScrollView(
             slivers: [
               SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    24,
-                    60,
-                    24,
-                    24,
-                  ), // Top padding for status bar/safe area
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Header
-                      Text(
-                        'Good Morning,',
-                        style: Theme.of(context).textTheme.headlineMedium,
-                      ).animate().fadeIn().moveY(
-                        begin: 10,
-                        end: 0,
-                        duration: 400.ms,
-                      ),
-                      Text(
-                        'Seonghyeon.',
-                        style: Theme.of(context).textTheme.headlineMedium
-                            ?.copyWith(color: AppTheme.primary),
-                      ).animate().fadeIn().moveY(
-                        begin: 10,
-                        end: 0,
-                        delay: 100.ms,
-                        duration: 400.ms,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Ready to conquer the rain today?',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppTheme.textMuted,
-                        ),
-                      ).animate().fadeIn(delay: 200.ms),
-
-                      const SizedBox(height: 32),
-
-                      // Weather & Schedule
-                      _buildInfoCards().animate().scale(
-                        delay: 200.ms,
-                        duration: 400.ms,
-                      ),
-
-                      const SizedBox(height: 32),
-
-                      // Today's Pick
-                      _buildTodaysPick(),
-
-                      const SizedBox(height: 32),
-
-                      // Chat
-                      _buildChatSection(),
-
-                      const SizedBox(
-                        height: 100,
-                      ), // Bottom padding for FAB and Navbar
-                    ],
+                child: ResponsiveWrapper(
+                  maxWidth: 1200,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 60, 24, 24),
+                    child: isWeb ? _buildWebLayout() : _buildMobileLayout(),
                   ),
                 ),
               ),
             ],
           ),
-
           // FAB
-          Positioned(
-            bottom: 30, // Above Navbar
-            left: 0,
-            right: 0,
-            child: Center(
-              child: FloatingActionButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const WardrobeNewScreen(),
-                    ),
-                  );
-                },
-                backgroundColor: Colors.white,
-                foregroundColor: Colors.black,
-                elevation: 4,
-                child: const Icon(LucideIcons.plus, size: 28),
+          if (!isWeb)
+            Positioned(
+              bottom: 30, // Above Navbar
+              left: 0,
+              right: 0,
+              child: Center(
+                child: FloatingActionButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const WardrobeNewScreen(),
+                      ),
+                    );
+                  },
+                  backgroundColor: Colors.white,
+                  foregroundColor: Colors.black,
+                  elevation: 4,
+                  child: const Icon(LucideIcons.plus, size: 28),
+                ),
               ),
             ),
-          ),
         ],
       ),
+      floatingActionButton: isWeb
+          ? FloatingActionButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const WardrobeNewScreen()),
+                );
+              },
+              backgroundColor: Colors.white,
+              foregroundColor: Colors.black,
+              child: const Icon(LucideIcons.plus, size: 28),
+            )
+          : null,
+    );
+  }
+
+  Widget _buildMobileLayout() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildHeader(),
+        const SizedBox(height: 32),
+        _buildInfoCards().animate().scale(delay: 200.ms, duration: 400.ms),
+        const SizedBox(height: 32),
+        _buildTodaysPick(),
+        const SizedBox(height: 32),
+        _buildChatSection(),
+        const SizedBox(height: 100),
+      ],
+    );
+  }
+
+  Widget _buildWebLayout() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          flex: 3,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(),
+              const SizedBox(height: 32),
+              _buildInfoCards().animate().scale(
+                delay: 200.ms,
+                duration: 400.ms,
+              ),
+              const SizedBox(height: 32),
+              _buildTodaysPick(),
+            ],
+          ),
+        ),
+        const SizedBox(width: 48),
+        Expanded(
+          flex: 2,
+          child: Column(
+            children: [
+              const SizedBox(height: 100), // Align with header-ish
+              _buildChatSection(),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHeader() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Good Morning,',
+          style: Theme.of(context).textTheme.headlineMedium,
+        ).animate().fadeIn().moveY(begin: 10, end: 0, duration: 400.ms),
+        Text(
+          'Seonghyeon.',
+          style: Theme.of(
+            context,
+          ).textTheme.headlineMedium?.copyWith(color: AppTheme.primary),
+        ).animate().fadeIn().moveY(
+          begin: 10,
+          end: 0,
+          delay: 100.ms,
+          duration: 400.ms,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Ready to conquer the rain today?',
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: AppTheme.textMuted),
+        ).animate().fadeIn(delay: 200.ms),
+      ],
     );
   }
 

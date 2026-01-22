@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/api_provider.dart';
 import '../theme/app_theme.dart';
+import '../utils/responsive_helper.dart';
 
 class WardrobeNewScreen extends ConsumerStatefulWidget {
   const WardrobeNewScreen({super.key});
@@ -94,13 +95,16 @@ class _WardrobeNewScreenState extends ConsumerState<WardrobeNewScreen> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: _files.isEmpty ? _buildEmptyState() : _buildFileList(),
-          ),
-          _buildBottomBar(),
-        ],
+      body: ResponsiveWrapper(
+        maxWidth: 1000,
+        child: Column(
+          children: [
+            Expanded(
+              child: _files.isEmpty ? _buildEmptyState() : _buildFileList(),
+            ),
+            _buildBottomBar(),
+          ],
+        ),
       ),
     );
   }
@@ -144,114 +148,137 @@ class _WardrobeNewScreenState extends ConsumerState<WardrobeNewScreen> {
   }
 
   Widget _buildFileList() {
+    final isWeb = ResponsiveHelper.isWeb(context);
+
+    if (isWeb) {
+      return GridView.builder(
+        padding: const EdgeInsets.all(24),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,
+          crossAxisSpacing: 16,
+          mainAxisSpacing: 16,
+          childAspectRatio: 1.5,
+        ),
+        itemCount: _files.length,
+        itemBuilder: (context, index) {
+          final obj = _files[index];
+          return _buildFileItem(obj, index);
+        },
+      );
+    }
+
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: _files.length,
       itemBuilder: (context, index) {
         final obj = _files[index];
-        return Container(
-          margin: const EdgeInsets.only(bottom: 16),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: AppTheme.bgCard,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white10),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 70,
-                height: 70,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8),
-                  image: DecorationImage(
-                    image: FileImage(File(obj.file.path)),
-                    fit: BoxFit.cover,
-                  ),
-                ),
+        return _buildFileItem(obj, index);
+      },
+    );
+  }
+
+  Widget _buildFileItem(FileObj obj, int index) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppTheme.bgCard,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 70,
+            height: 70,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              image: DecorationImage(
+                image: FileImage(File(obj.file.path)),
+                fit: BoxFit.cover,
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      obj.file.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 8),
-                    if (obj.status == 'processing')
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  obj.file.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 8),
+                if (obj.status == 'processing')
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      LinearProgressIndicator(
+                        value: obj.progress / 100,
+                        backgroundColor: Colors.white10,
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                          AppTheme.primary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'AI Analyzing...',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: AppTheme.textMuted,
+                        ),
+                      ),
+                    ],
+                  )
+                else if (obj.status == 'completed')
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
                         children: [
-                          LinearProgressIndicator(
-                            value: obj.progress / 100,
-                            backgroundColor: Colors.white10,
-                            valueColor: const AlwaysStoppedAnimation<Color>(
-                              AppTheme.primary,
-                            ),
+                          const Icon(
+                            LucideIcons.checkCircle,
+                            size: 14,
+                            color: Colors.greenAccent,
                           ),
-                          const SizedBox(height: 4),
-                          const Text(
-                            'AI Analyzing...',
-                            style: TextStyle(
-                              fontSize: 10,
+                          const SizedBox(width: 4),
+                          Text(
+                            '${obj.attributes?['color']?['primary']} ${obj.attributes?['category']?['sub']}',
+                            style: const TextStyle(
+                              fontSize: 12,
                               color: AppTheme.textMuted,
                             ),
                           ),
                         ],
-                      )
-                    else if (obj.status == 'completed')
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(
-                                LucideIcons.checkCircle,
-                                size: 14,
-                                color: Colors.greenAccent,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                '${obj.attributes?['color']?['primary']} ${obj.attributes?['category']?['sub']}',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: AppTheme.textMuted,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      )
-                    else if (obj.status == 'error')
-                      Text(
-                        obj.error ?? 'Error',
-                        style: const TextStyle(
-                          color: Colors.redAccent,
-                          fontSize: 12,
-                        ),
                       ),
-                  ],
-                ),
-              ),
-              IconButton(
-                icon: const Icon(
-                  LucideIcons.x,
-                  size: 18,
-                  color: AppTheme.textMuted,
-                ),
-                onPressed: () {
-                  setState(() {
-                    _files.removeAt(index);
-                  });
-                },
-              ),
-            ],
+                    ],
+                  )
+                else if (obj.status == 'error')
+                  Text(
+                    obj.error ?? 'Error',
+                    style: const TextStyle(
+                      color: Colors.redAccent,
+                      fontSize: 12,
+                    ),
+                  ),
+              ],
+            ),
           ),
-        );
-      },
+          IconButton(
+            icon: const Icon(
+              LucideIcons.x,
+              size: 18,
+              color: AppTheme.textMuted,
+            ),
+            onPressed: () {
+              setState(() {
+                _files.removeAt(index);
+              });
+            },
+          ),
+        ],
+      ),
     );
   }
 

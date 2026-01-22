@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
+import '../utils/responsive_helper.dart';
 
 class SignupScreen extends ConsumerStatefulWidget {
   const SignupScreen({super.key});
@@ -127,23 +128,26 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           ),
         ),
         child: SafeArea(
-          child: Column(
-            children: [
-              _buildHeader(),
-              _buildProgressIndicator(),
-              Expanded(
-                child: PageView(
-                  controller: _pageController,
-                  physics: const NeverScrollableScrollPhysics(),
-                  children: [
-                    _buildStepAccount(),
-                    _buildStepGender(),
-                    _buildStepBodyShape(),
-                  ],
+          child: ResponsiveWrapper(
+            maxWidth: 800,
+            child: Column(
+              children: [
+                _buildHeader(),
+                _buildProgressIndicator(),
+                Expanded(
+                  child: PageView(
+                    controller: _pageController,
+                    physics: const NeverScrollableScrollPhysics(),
+                    children: [
+                      _buildStepAccount(),
+                      _buildStepGender(),
+                      _buildStepBodyShape(),
+                    ],
+                  ),
                 ),
-              ),
-              _buildFooter(authState.isLoading),
-            ],
+                _buildFooter(authState.isLoading),
+              ],
+            ),
           ),
         ),
       ),
@@ -275,6 +279,100 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
             'body_shape_5.png',
             'body_shape_6.png',
           ];
+
+    final isWeb = ResponsiveHelper.isWeb(context);
+
+    if (isWeb) {
+      return Column(
+        children: [
+          const SizedBox(height: 20),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: Text(
+              '체형을 선택하세요',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Expanded(
+            child: GridView.builder(
+              padding: const EdgeInsets.all(24),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+                childAspectRatio: 0.8,
+              ),
+              itemCount: shapes.length,
+              itemBuilder: (context, index) {
+                final shape = shapes[index];
+                final isSelected = _selectedBodyShape == shape;
+                final folder = _selectedGender == 'man'
+                    ? 'result_shapes_man'
+                    : 'result_shapes_woman';
+
+                return GestureDetector(
+                  onTap: () => setState(() => _selectedBodyShape = shape),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    decoration: BoxDecoration(
+                      color: AppTheme.bgCard,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isSelected ? AppTheme.primary : Colors.white10,
+                        width: 2,
+                      ),
+                      boxShadow: isSelected
+                          ? [
+                              BoxShadow(
+                                color: AppTheme.primary.withOpacity(0.2),
+                                blurRadius: 10,
+                              ),
+                            ]
+                          : null,
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.all(12.0),
+                            child: Image.asset(
+                              'assets/images/$folder/$shape',
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          width: double.infinity,
+                          color: AppTheme.primary.withOpacity(
+                            isSelected ? 0.1 : 0,
+                          ),
+                          child: Center(
+                            child: Text(
+                              '체형 ${index + 1}',
+                              style: TextStyle(
+                                color: isSelected
+                                    ? AppTheme.primary
+                                    : AppTheme.textMain,
+                                fontWeight: isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      );
+    }
 
     return Column(
       children: [

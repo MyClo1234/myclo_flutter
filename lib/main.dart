@@ -5,8 +5,9 @@ import 'screens/home_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/login_screen.dart';
 import 'providers/auth_provider.dart';
-
 import 'widgets/custom_navbar.dart';
+import 'utils/responsive_helper.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 
 void main() {
   runApp(const ProviderScope(child: MyApp()));
@@ -44,16 +45,50 @@ class _MainWrapperState extends State<MainWrapper> {
 
   @override
   Widget build(BuildContext context) {
+    final isWeb = ResponsiveHelper.isWeb(context);
+
     return Scaffold(
-      body: IndexedStack(index: _currentIndex, children: _screens),
-      bottomNavigationBar: CustomNavbar(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
+      body: Row(
+        children: [
+          if (isWeb)
+            NavigationRail(
+              selectedIndex: _currentIndex,
+              onDestinationSelected: (index) {
+                setState(() => _currentIndex = index);
+              },
+              backgroundColor: AppTheme.bgDark,
+              indicatorColor: AppTheme.primary.withOpacity(0.1),
+              selectedIconTheme: const IconThemeData(color: AppTheme.primary),
+              unselectedIconTheme: const IconThemeData(
+                color: AppTheme.textMuted,
+              ),
+              labelType: NavigationRailLabelType.all,
+              destinations: const [
+                NavigationRailDestination(
+                  icon: Icon(LucideIcons.home),
+                  label: Text('Home'),
+                ),
+                NavigationRailDestination(
+                  icon: Icon(LucideIcons.user),
+                  label: Text('Profile'),
+                ),
+              ],
+            ),
+          Expanded(
+            child: IndexedStack(index: _currentIndex, children: _screens),
+          ),
+        ],
       ),
+      bottomNavigationBar: isWeb
+          ? null
+          : CustomNavbar(
+              currentIndex: _currentIndex,
+              onTap: (index) {
+                setState(() {
+                  _currentIndex = index;
+                });
+              },
+            ),
     );
   }
 }

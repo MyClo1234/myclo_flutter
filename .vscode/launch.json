@@ -2,6 +2,15 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "myclo_flutter (Web)",
+            "request": "launch",
+            "type": "dart",
+            "args": [
+                "--device-id",
+                "chrome"
+            ]
+        },
+        {
             "name": "myclo_flutter",
             "request": "launch",
             "type": "dart"

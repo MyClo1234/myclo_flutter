@@ -10,6 +10,7 @@ import '../providers/wardrobe_provider.dart';
 
 import '../services/api_service.dart'; // Needed for ApiService.baseUrl if static
 import '../providers/auth_provider.dart';
+import '../utils/responsive_helper.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -123,14 +124,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
             ),
           ];
         },
-        body: TabBarView(
-          controller: _tabController,
-          children: [
-            _buildProfileTab(),
-            _buildWardrobeTab(),
-            _buildCalendarTab(),
-            _buildSettingsTab(),
-          ],
+        body: ResponsiveWrapper(
+          maxWidth: 1200,
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              _buildProfileTab(),
+              _buildWardrobeTab(),
+              _buildCalendarTab(),
+              _buildSettingsTab(),
+            ],
+          ),
         ),
       ),
       floatingActionButton: _tabController.index == 1
@@ -370,10 +374,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
           );
         }
 
+        final isWeb = ResponsiveHelper.isWeb(context);
+
         return GridView.builder(
           padding: const EdgeInsets.all(24),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: isWeb ? 4 : 2,
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
             childAspectRatio: 0.75, // Better aspect ratio for images
