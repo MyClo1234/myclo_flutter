@@ -30,12 +30,7 @@ class CustomNavbar extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _buildNavItem(0, LucideIcons.home, 'Home'),
-              _buildNavItem(
-                1,
-                LucideIcons.shirt,
-                'Wardrobe',
-              ), // Mapped to Profile -> Wardrobe tab usually
-              _buildNavItem(2, LucideIcons.user, 'Profile'),
+              _buildNavItem(1, LucideIcons.user, 'Profile'),
             ],
           ),
         ),

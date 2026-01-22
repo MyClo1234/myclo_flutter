@@ -40,11 +40,7 @@ class MainWrapper extends StatefulWidget {
 class _MainWrapperState extends State<MainWrapper> {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = [
-    const HomeScreen(),
-    const ProfileScreen(), // Fixed: using const if possible or ensuring consistency
-    const ProfileScreen(),
-  ];
+  final List<Widget> _screens = [const HomeScreen(), const ProfileScreen()];
 
   @override
   Widget build(BuildContext context) {
