@@ -5,9 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 import '../theme/app_theme.dart';
-import 'wardrobe_new_screen.dart';
 import 'outfit_detail_screen.dart';
 import '../providers/recommendation_provider.dart';
+import '../providers/auth_provider.dart';
 
 import '../services/api_service.dart';
 import '../utils/responsive_helper.dart';
@@ -105,44 +105,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
             ],
           ),
-          // FAB
-          if (!isWeb)
-            Positioned(
-              bottom: 30, // Above Navbar
-              left: 0,
-              right: 0,
-              child: Center(
-                child: FloatingActionButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const WardrobeNewScreen(),
-                      ),
-                    );
-                  },
-                  backgroundColor: Colors.white,
-                  foregroundColor: Colors.black,
-                  elevation: 4,
-                  child: const Icon(LucideIcons.plus, size: 28),
-                ),
-              ),
-            ),
         ],
       ),
-      floatingActionButton: isWeb
-          ? FloatingActionButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const WardrobeNewScreen()),
-                );
-              },
-              backgroundColor: Colors.white,
-              foregroundColor: Colors.black,
-              child: const Icon(LucideIcons.plus, size: 28),
-            )
-          : null,
     );
   }
 
@@ -197,6 +161,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildHeader() {
+    final authState = ref.watch(authProvider);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -205,7 +171,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           style: Theme.of(context).textTheme.headlineMedium,
         ).animate().fadeIn().moveY(begin: 10, end: 0, duration: 400.ms),
         Text(
-          'Seonghyeon.',
+          '${authState.username ?? 'User'}.',
           style: Theme.of(
             context,
           ).textTheme.headlineMedium?.copyWith(color: AppTheme.primary),

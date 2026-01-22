@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
 import '../utils/responsive_helper.dart';
+import 'main_wrapper.dart';
 
 class SignupScreen extends ConsumerStatefulWidget {
   const SignupScreen({super.key});
@@ -20,10 +22,15 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   final _pwController = TextEditingController();
   final _confirmPwController = TextEditingController();
 
-  // Step 2: Gender
+  // Step 2: Physical Info (New)
+  final _ageController = TextEditingController();
+  final _heightController = TextEditingController();
+  final _weightController = TextEditingController();
+
+  // Step 3: Gender
   String? _selectedGender;
 
-  // Step 3: Body Shape
+  // Step 4: Body Shape
   String? _selectedBodyShape;
 
   @override
@@ -32,11 +39,15 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     _idController.dispose();
     _pwController.dispose();
     _confirmPwController.dispose();
+    _ageController.dispose();
+    _heightController.dispose();
+    _weightController.dispose();
     super.dispose();
   }
 
   void _nextStep() {
     if (_currentStep == 0) {
+      // Account Validation
       final id = _idController.text.trim();
       final pw = _pwController.text.trim();
       final confirmPw = _confirmPwController.text.trim();
@@ -50,6 +61,15 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         return;
       }
     } else if (_currentStep == 1) {
+      // Physical Info Validation
+      if (_ageController.text.isEmpty ||
+          _heightController.text.isEmpty ||
+          _weightController.text.isEmpty) {
+        _showSnackBar('모든 정보를 입력해주세요.');
+        return;
+      }
+    } else if (_currentStep == 2) {
+      // Gender Validation
       if (_selectedGender == null) {
         _showSnackBar('성별을 선택해주세요.');
         return;
@@ -62,8 +82,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     );
     setState(() {
       _currentStep++;
-      // Auto-select first shape if not already selected when entering Step 2 (Body Shape)
-      if (_currentStep == 2 && _selectedBodyShape == null) {
+      // Auto-select first shape if not already selected when entering Step 4 (Body Shape)
+      if (_currentStep == 3 && _selectedBodyShape == null) {
         final List<String> shapes = _selectedGender == 'man'
             ? [
                 'body_shape_1.png',
@@ -79,7 +99,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                 'body_shape_5.png',
                 'body_shape_6.png',
               ];
-        _selectedBodyShape = shapes[0];
+        if (_selectedBodyShape == null) {
+          _selectedBodyShape = shapes[0];
+        }
       }
     });
   }
@@ -104,6 +126,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       return;
     }
 
+    final age = int.tryParse(_ageController.text.trim()) ?? 0;
+    final height = int.tryParse(_heightController.text.trim()) ?? 0;
+    final weight = int.tryParse(_weightController.text.trim()) ?? 0;
+
     ref
         .read(authProvider.notifier)
         .register(
@@ -111,11 +137,28 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           _pwController.text.trim(),
           _selectedGender!,
           _selectedBodyShape!,
+          age,
+          height,
+          weight,
         );
   }
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(authProvider, (previous, next) {
+      if (next.error != null && next.error != previous?.error) {
+        _showSnackBar(next.error!);
+      }
+
+      // Explicit navigation on success
+      if (next.isAuthenticated == true) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const MainWrapper()),
+          (route) => false,
+        );
+      }
+    });
+
     final authState = ref.watch(authProvider);
 
     return Scaffold(
@@ -140,6 +183,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     physics: const NeverScrollableScrollPhysics(),
                     children: [
                       _buildStepAccount(),
+                      _buildStepPhysicalInfo(),
                       _buildStepGender(),
                       _buildStepBodyShape(),
                     ],
@@ -155,6 +199,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   }
 
   Widget _buildHeader() {
+    final titles = ['계정 생성', '신체 정보', '성별 선택', '체형 선택'];
+    final title = titles.length > _currentStep ? titles[_currentStep] : '';
+
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Row(
@@ -167,9 +214,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           ),
           const SizedBox(width: 8),
           Text(
-            _currentStep == 0
-                ? '계정 생성'
-                : (_currentStep == 1 ? '성별 선택' : '체형 선택'),
+            title,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
               color: AppTheme.primary,
               fontWeight: FontWeight.bold,
@@ -184,7 +229,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8),
       child: Row(
-        children: List.generate(3, (index) {
+        children: List.generate(4, (index) {
           final isActive = index <= _currentStep;
           return Expanded(
             child: Container(
@@ -234,8 +279,50 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     );
   }
 
+  Widget _buildStepPhysicalInfo() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildTextField(
+            controller: _ageController,
+            label: '나이',
+            icon: Icons.calendar_today,
+            hint: '예: 25',
+            keyboardType: TextInputType.number,
+            onChanged: (val) {
+              if (val.isNotEmpty && int.tryParse(val) == null) {
+                _ageController.text = val.replaceAll(RegExp(r'[^0-9]'), '');
+                _ageController.selection = TextSelection.fromPosition(
+                  TextPosition(offset: _ageController.text.length),
+                );
+              }
+            },
+          ),
+          const SizedBox(height: 16),
+          _buildTextField(
+            controller: _heightController,
+            label: '키 (cm)',
+            icon: Icons.height,
+            hint: '예: 175',
+            keyboardType: TextInputType.number,
+          ),
+          const SizedBox(height: 16),
+          _buildTextField(
+            controller: _weightController,
+            label: '몸무게 (kg)',
+            icon: Icons.monitor_weight_outlined,
+            hint: '예: 70',
+            keyboardType: TextInputType.number,
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildStepGender() {
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(24.0),
       child: Column(
         children: [
@@ -374,128 +461,133 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       );
     }
 
-    return Column(
-      children: [
-        const SizedBox(height: 20),
-        Expanded(
-          child: PageView.builder(
-            itemCount: shapes.length,
-            onPageChanged: (index) {
-              setState(() => _selectedBodyShape = shapes[index]);
-            },
-            itemBuilder: (context, index) {
-              final shape = shapes[index];
-              final isSelected = _selectedBodyShape == shape;
-              final folder = _selectedGender == 'man'
-                  ? 'result_shapes_man'
-                  : 'result_shapes_woman';
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          const SizedBox(height: 20),
+          SizedBox(
+            height: 450,
+            child: PageView.builder(
+              itemCount: shapes.length,
+              onPageChanged: (index) {
+                setState(() => _selectedBodyShape = shapes[index]);
+              },
+              itemBuilder: (context, index) {
+                final shape = shapes[index];
+                final isSelected = _selectedBodyShape == shape;
+                final folder = _selectedGender == 'man'
+                    ? 'result_shapes_man'
+                    : 'result_shapes_woman';
 
-              return AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                margin: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  color: AppTheme.bgCard,
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
-                    color: isSelected ? AppTheme.primary : Colors.white10,
-                    width: 2,
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 10,
                   ),
-                  boxShadow: isSelected
-                      ? [
-                          BoxShadow(
-                            color: AppTheme.primary.withOpacity(0.2),
-                            blurRadius: 15,
-                            spreadRadius: 2,
+                  decoration: BoxDecoration(
+                    color: AppTheme.bgCard,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: isSelected ? AppTheme.primary : Colors.white10,
+                      width: 2,
+                    ),
+                    boxShadow: isSelected
+                        ? [
+                            BoxShadow(
+                              color: AppTheme.primary.withOpacity(0.2),
+                              blurRadius: 15,
+                              spreadRadius: 2,
+                            ),
+                          ]
+                        : null,
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.all(20.0),
+                          child: Image.asset(
+                            'assets/images/$folder/$shape',
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) =>
+                                const Icon(
+                                  Icons.image_not_supported,
+                                  color: AppTheme.textMuted,
+                                  size: 64,
+                                ),
                           ),
-                        ]
-                      : null,
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.all(20.0),
-                        child: Image.asset(
-                          'assets/images/$folder/$shape',
-                          fit: BoxFit.contain,
-                          errorBuilder: (context, error, stackTrace) =>
-                              const Icon(
-                                Icons.image_not_supported,
-                                color: AppTheme.textMuted,
-                                size: 64,
-                              ),
                         ),
                       ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 16,
-                        horizontal: 24,
-                      ),
-                      color: AppTheme.primary.withOpacity(isSelected ? 0.1 : 0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            isSelected
-                                ? Icons.check_circle
-                                : Icons.radio_button_off,
-                            color: isSelected
-                                ? AppTheme.primary
-                                : AppTheme.textMuted,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            '체형 ${index + 1}',
-                            style: TextStyle(
-                              fontSize: 18,
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 16,
+                          horizontal: 24,
+                        ),
+                        color: AppTheme.primary.withOpacity(
+                          isSelected ? 0.1 : 0,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              isSelected
+                                  ? Icons.check_circle
+                                  : Icons.radio_button_off,
                               color: isSelected
                                   ? AppTheme.primary
-                                  : AppTheme.textMain,
-                              fontWeight: isSelected
-                                  ? FontWeight.bold
-                                  : FontWeight.normal,
+                                  : AppTheme.textMuted,
+                              size: 20,
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 8),
+                            Text(
+                              '체형 ${index + 1}',
+                              style: TextStyle(
+                                fontSize: 18,
+                                color: isSelected
+                                    ? AppTheme.primary
+                                    : AppTheme.textMain,
+                                fontWeight: isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(shapes.length, (index) {
+              final isSelectedIndex =
+                  shapes.indexOf(_selectedBodyShape ?? '') == index;
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                width: isSelectedIndex ? 24 : 8,
+                height: 8,
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                decoration: BoxDecoration(
+                  color: isSelectedIndex ? AppTheme.primary : AppTheme.bgCard,
+                  borderRadius: BorderRadius.circular(4),
                 ),
               );
-            },
+            }),
           ),
-        ),
-        const SizedBox(height: 16),
-        // Indicators
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(shapes.length, (index) {
-            final isSelectedIndex =
-                shapes.indexOf(_selectedBodyShape ?? '') == index;
-            return AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              width: isSelectedIndex ? 24 : 8,
-              height: 8,
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-              decoration: BoxDecoration(
-                color: isSelectedIndex ? AppTheme.primary : AppTheme.bgCard,
-                borderRadius: BorderRadius.circular(4),
-              ),
-            );
-          }),
-        ),
-        const SizedBox(height: 20),
-        const Text(
-          '좌우로 밀어서 체형을 선택하세요',
-          style: TextStyle(color: AppTheme.textMuted, fontSize: 13),
-        ),
-      ],
+          const SizedBox(height: 20),
+          const Text(
+            '좌우로 밀어서 체형을 선택하세요',
+            style: TextStyle(color: AppTheme.textMuted, fontSize: 13),
+          ),
+          const SizedBox(height: 20),
+        ],
+      ),
     );
   }
 
@@ -508,7 +600,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           ElevatedButton(
             onPressed: isLoading
                 ? null
-                : (_currentStep == 2 ? _handleSignup : _nextStep),
+                : (_currentStep == 3 ? _handleSignup : _nextStep),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.primary,
               foregroundColor: AppTheme.bgDark,
@@ -529,7 +621,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     ),
                   )
                 : Text(
-                    _currentStep == 2 ? '완료' : '다음',
+                    _currentStep == 3 ? '완료' : '다음',
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
           ),
@@ -601,6 +693,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     required IconData icon,
     required String hint,
     bool isPassword = false,
+    TextInputType? keyboardType,
+    void Function(String)? onChanged,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -615,6 +709,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         TextField(
           controller: controller,
           obscureText: isPassword,
+          keyboardType: keyboardType,
+          onChanged: onChanged,
           style: const TextStyle(color: AppTheme.textMain),
           decoration: InputDecoration(
             hintText: hint,

@@ -51,6 +51,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
 
   @override
   Widget build(BuildContext context) {
+    final authState = ref.watch(authProvider);
+    final username = authState.username ?? 'User';
+    final initial = username.isNotEmpty ? username[0].toUpperCase() : 'U';
+
     return Scaffold(
       body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) {
@@ -76,10 +80,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                         ),
                         shape: BoxShape.circle,
                       ),
-                      child: const Center(
+                      child: Center(
                         child: Text(
-                          'S',
-                          style: TextStyle(
+                          initial,
+                          style: const TextStyle(
                             fontSize: 32,
                             fontWeight: FontWeight.bold,
                             color: Colors.black,
@@ -88,12 +92,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                       ),
                     ),
                     const SizedBox(width: 16),
-                    const Column(
+                    Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Seonghyeon Choe',
-                          style: TextStyle(
+                          username,
+                          style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
                           ),
@@ -137,21 +141,28 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
           ),
         ),
       ),
-      floatingActionButton: _tabController.index == 1
-          ? FloatingActionButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const WardrobeNewScreen()),
-                ).then((_) {
-                  ref.read(wardrobeProvider.notifier).refresh();
-                });
-              },
-              backgroundColor: Colors.white,
-              foregroundColor: Colors.black,
-              child: const Icon(LucideIcons.plus),
-            )
-          : null,
+      floatingActionButton: AnimatedBuilder(
+        animation: _tabController,
+        builder: (context, child) {
+          return _tabController.index == 1
+              ? FloatingActionButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const WardrobeNewScreen(),
+                      ),
+                    ).then((_) {
+                      ref.read(wardrobeProvider.notifier).refresh();
+                    });
+                  },
+                  backgroundColor: Colors.white,
+                  foregroundColor: Colors.black,
+                  child: const Icon(LucideIcons.plus),
+                )
+              : const SizedBox.shrink();
+        },
+      ),
     );
   }
 
@@ -219,6 +230,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   }
 
   Widget _buildProfileTab() {
+    final authState = ref.watch(authProvider);
+    final height = authState.height?.toString() ?? '-';
+    final weight = authState.weight?.toString() ?? '-';
+
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
@@ -236,7 +251,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
             Expanded(
               child: _buildStatCard(
                 'Height',
-                '182',
+                height,
                 'cm',
                 LucideIcons.ruler,
                 AppTheme.primary,
@@ -246,7 +261,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
             Expanded(
               child: _buildStatCard(
                 'Weight',
-                '75',
+                weight,
                 'kg',
                 LucideIcons.user,
                 AppTheme.accent,
@@ -255,10 +270,59 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
           ],
         ),
         const SizedBox(height: 16),
+        // Display Current Body Shape
+        if (authState.bodyShape != null) ...[
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppTheme.bgCard.withOpacity(0.5),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppTheme.borderLight),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Body Shape',
+                        style: TextStyle(color: AppTheme.textMuted),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _formatBodyShape(authState.bodyShape!),
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  flex: 1,
+                  child: Image.asset(
+                    'assets/images/${authState.gender == "man" ? "result_shapes_man" : "result_shapes_woman"}/${authState.bodyShape}',
+                    height: 80,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) => const Icon(
+                      Icons.person,
+                      size: 50,
+                      color: Colors.white24,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
         SizedBox(
           width: double.infinity,
           child: OutlinedButton(
-            onPressed: () {},
+            onPressed: () => _showEditProfileDialog(context, authState),
             style: OutlinedButton.styleFrom(
               side: const BorderSide(color: Colors.white10),
               padding: const EdgeInsets.all(16),
@@ -268,6 +332,193 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
           ),
         ),
       ],
+    );
+  }
+
+  String _formatBodyShape(String shape) {
+    // Example: body_shape_1.png -> Type 1
+    final name = shape.split('.').first;
+    final parts = name.split('_');
+    if (parts.length >= 3) {
+      return 'Type ${parts.last}';
+    }
+    return shape;
+  }
+
+  void _showEditProfileDialog(BuildContext context, AuthState authState) {
+    final heightController = TextEditingController(
+      text: authState.height?.toString() ?? '',
+    );
+    final weightController = TextEditingController(
+      text: authState.weight?.toString() ?? '',
+    );
+    String? selectedBodyShape = authState.bodyShape;
+    // Fallback if null, though it shouldn't be if registered correctly
+    final gender = authState.gender ?? 'man';
+
+    final List<String> shapes = gender == 'man'
+        ? [
+            'body_shape_1.png',
+            'body_shape_3.png',
+            'body_shape_4.png',
+            'body_shape_5.png',
+            'body_shape_6.png',
+          ]
+        : [
+            'body_shape_1.png',
+            'body_shape_2.png',
+            'body_shape_3.png',
+            'body_shape_5.png',
+            'body_shape_6.png',
+          ];
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            backgroundColor: AppTheme.bgDark,
+            title: const Text(
+              'Edit Profile',
+              style: TextStyle(color: Colors.white),
+            ),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: heightController,
+                      keyboardType: TextInputType.number,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: const InputDecoration(
+                        labelText: 'Height (cm)',
+                        labelStyle: TextStyle(color: Colors.white70),
+                        enabledBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(color: Colors.white24),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: weightController,
+                      keyboardType: TextInputType.number,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: const InputDecoration(
+                        labelText: 'Weight (kg)',
+                        labelStyle: TextStyle(color: Colors.white70),
+                        enabledBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(color: Colors.white24),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    const Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Body Shape',
+                        style: TextStyle(color: Colors.white70),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: 150,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: shapes.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 12),
+                        itemBuilder: (context, index) {
+                          final shape = shapes[index];
+                          final isSelected = selectedBodyShape == shape;
+                          final folder = gender == 'man'
+                              ? 'result_shapes_man'
+                              : 'result_shapes_woman';
+
+                          return GestureDetector(
+                            onTap: () {
+                              setState(() => selectedBodyShape = shape);
+                            },
+                            child: Container(
+                              width: 100,
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? AppTheme.primary.withOpacity(0.1)
+                                    : Colors.transparent,
+                                border: Border.all(
+                                  color: isSelected
+                                      ? AppTheme.primary
+                                      : Colors.white10,
+                                  width: 2,
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.all(8),
+                              child: Column(
+                                children: [
+                                  Expanded(
+                                    child: Image.asset(
+                                      'assets/images/$folder/$shape',
+                                      fit: BoxFit.contain,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Type ${index + 1}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: isSelected
+                                          ? AppTheme.primary
+                                          : Colors.white70,
+                                      fontWeight: isSelected
+                                          ? FontWeight.bold
+                                          : FontWeight.normal,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(color: Colors.white54),
+                ),
+              ),
+              TextButton(
+                onPressed: () {
+                  final h = int.tryParse(heightController.text) ?? 0;
+                  final w = int.tryParse(weightController.text) ?? 0;
+                  if (selectedBodyShape != null) {
+                    ref
+                        .read(authProvider.notifier)
+                        .updateProfile(
+                          height: h,
+                          weight: w,
+                          gender: gender,
+                          bodyShape: selectedBodyShape!,
+                        );
+                    Navigator.pop(context);
+                  }
+                },
+                child: const Text(
+                  'Save',
+                  style: TextStyle(color: AppTheme.primary),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 
@@ -305,6 +556,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                     fontFamily: 'Manrope',
+                    color: AppTheme.textMain,
                   ),
                 ),
                 TextSpan(

@@ -1,9 +1,11 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/api_provider.dart';
+import '../providers/wardrobe_provider.dart';
 import '../theme/app_theme.dart';
 import '../utils/responsive_helper.dart';
 
@@ -62,15 +64,22 @@ class _WardrobeNewScreenState extends ConsumerState<WardrobeNewScreen> {
             fileObj.progress = 50;
           });
 
-          // Extract Attributes (Mock API for clothes data)
-          final data = await api.extractAttributes(fileObj.file);
+          // Extract Attributes (API Upload)
+          // API now accepts a list and returns a list
+          final dataList = await api.extractAttributes([fileObj.file]);
 
-          if (mounted) {
+          if (mounted && dataList.isNotEmpty) {
             setState(() {
               fileObj.status = 'completed';
-              fileObj.attributes = data['attributes'];
+              // The API returns [{ "image_url": "...", "item_id": "..." }]
+              // attributes are not returned in the new schema, but we assign the map
+              // so we have the ID at least.
+              fileObj.attributes = dataList[0];
               fileObj.progress = 100;
             });
+
+            // Trigger background refresh of the wardrobe list immediately after success
+            ref.read(wardrobeProvider.notifier).refresh();
           }
         } catch (e) {
           if (mounted) {
@@ -194,7 +203,9 @@ class _WardrobeNewScreenState extends ConsumerState<WardrobeNewScreen> {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(8),
               image: DecorationImage(
-                image: FileImage(File(obj.file.path)),
+                image: kIsWeb
+                    ? NetworkImage(obj.file.path)
+                    : FileImage(File(obj.file.path)) as ImageProvider,
                 fit: BoxFit.cover,
               ),
             ),
