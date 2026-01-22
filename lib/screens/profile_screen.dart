@@ -9,6 +9,7 @@ import 'wardrobe_new_screen.dart';
 import '../providers/wardrobe_provider.dart';
 
 import '../services/api_service.dart'; // Needed for ApiService.baseUrl if static
+import '../providers/auth_provider.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -464,7 +465,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
         const SizedBox(height: 16),
         _buildSettingsItem(LucideIcons.settings, 'Preferences'),
         const SizedBox(height: 12),
-        _buildSettingsItem(LucideIcons.logOut, 'Sign Out', isDestructive: true),
+        _buildSettingsItem(
+          LucideIcons.logOut,
+          'Sign Out',
+          isDestructive: true,
+          onTap: () {
+            ref.read(authProvider.notifier).logout();
+          },
+        ),
       ],
     );
   }
@@ -473,31 +481,40 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     IconData icon,
     String label, {
     bool isDestructive = false,
+    VoidCallback? onTap,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppTheme.bgCard.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            icon,
-            size: 20,
-            color: isDestructive ? Colors.redAccent : Colors.white,
-          ),
-          const SizedBox(width: 12),
-          Text(
-            label,
-            style: TextStyle(
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppTheme.bgCard.withOpacity(0.5),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              size: 20,
               color: isDestructive ? Colors.redAccent : Colors.white,
-              fontWeight: FontWeight.w500,
             ),
-          ),
-          const Spacer(),
-          const Icon(LucideIcons.chevronRight, size: 16, color: Colors.white24),
-        ],
+            const SizedBox(width: 12),
+            Text(
+              label,
+              style: TextStyle(
+                color: isDestructive ? Colors.redAccent : Colors.white,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const Spacer(),
+            const Icon(
+              LucideIcons.chevronRight,
+              size: 16,
+              color: Colors.white24,
+            ),
+          ],
+        ),
       ),
     );
   }

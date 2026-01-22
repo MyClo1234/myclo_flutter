@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'theme/app_theme.dart';
 import 'screens/home_screen.dart';
 import 'screens/profile_screen.dart';
+import 'screens/login_screen.dart';
+import 'providers/auth_provider.dart';
 
 import 'widgets/custom_navbar.dart';
 
@@ -10,15 +12,19 @@ void main() {
   runApp(const ProviderScope(child: MyApp()));
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authProvider);
+
     return MaterialApp(
       title: 'AI Stylist Agent',
       theme: AppTheme.darkTheme,
-      home: const MainWrapper(), // Using a wrapper for navigation
+      home: authState.isAuthenticated
+          ? const MainWrapper()
+          : const LoginScreen(),
       debugShowCheckedModeBanner: false,
     );
   }
@@ -34,12 +40,9 @@ class MainWrapper extends StatefulWidget {
 class _MainWrapperState extends State<MainWrapper> {
   int _currentIndex = 0;
 
-  // Note: We will implement these screens shortly
-  // For now placeholders or if files don't exist code will error,
-  // so I need to create empty shells for them immediately after this.
   final List<Widget> _screens = [
     const HomeScreen(),
-    ProfileScreen(), // Direct access to wardrobe
+    const ProfileScreen(), // Fixed: using const if possible or ensuring consistency
     const ProfileScreen(),
   ];
 
