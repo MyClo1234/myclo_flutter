@@ -1,0 +1,30 @@
+# azure-pipelines.yml
+
+trigger:
+- main
+
+pool:
+  vmImage: 'macos-latest'  # iOS 빌드를 위해 반드시 macos를 사용해야 합니다.
+
+steps:
+# 1. Flutter SDK 설치 (가장 안정적인 방법: git clone)
+- script: |
+    git clone https://github.com/flutter/flutter.git -b stable --depth 1
+    echo "##vso[task.prependpath]$(Build.SourcesDirectory)/flutter/bin"
+  displayName: 'Install Flutter SDK'
+
+# 2. 의존성 설치
+- script: |
+    flutter pub get
+  displayName: 'Install Dependencies'
+
+# 3. Android 빌드 (APK 생성)
+- script: |
+    flutter build apk --release
+  displayName: 'Build Android APK'
+
+# 4. iOS 빌드 (IPA 생성 - 서명 없이 빌드만 테스트)
+# 실제 배포를 하려면 인증서(Certificate) 설정이 필요합니다.
+- script: |
+    flutter build ios --release --no-codesign
+  displayName: 'Build iOS App (No Codesign)'
