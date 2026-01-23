@@ -1,14 +1,22 @@
-# azure-pipelines.yml
-
 trigger:
 - main
 - dev
 
 pool:
-  vmImage: 'codify-self-host-ci-cd'
+  name: 'codify-self-host-ci-cd'
 
 steps:
   - checkout: self
+
+  # 0) Node / npm 확인 (선택)
+  - task: Bash@3
+    displayName: "Check node/npm"
+    inputs:
+      targetType: "inline"
+      script: |
+        set -e
+        node -v
+        npm -v
 
   # 1) Flutter 설치
   - task: Bash@3
@@ -39,9 +47,13 @@ steps:
       script: |
         set -e
         flutter build web --release
+
+        # Static Web Apps SPA 라우팅 설정 포함
+        cp staticwebapp.config.json build/web/staticwebapp.config.json
+
         ls -al build/web
 
-  # 4) Static Web Apps로 배포
+  # 4) Static Web Apps로 배포 (npx 사용)
   - task: Bash@3
     displayName: "Deploy to Azure Static Web Apps"
     env:
@@ -50,5 +62,4 @@ steps:
       targetType: "inline"
       script: |
         set -e
-        npm i -g @azure/static-web-apps-cli
-        swa deploy ./build/web --deployment-token "$SWA_DEPLOYMENT_TOKEN"
+        npx -y @azure/static-web-apps-cli deploy ./build/web --deployment-token "$SWA_DEPLOYMENT_TOKEN"
