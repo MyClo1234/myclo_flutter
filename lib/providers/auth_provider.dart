@@ -113,9 +113,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
         username: user != null ? user['username'] : username,
         gender: user != null ? user['gender'] : null,
         bodyShape: user != null ? user['body_shape'] : null,
-        age: user != null ? user['age'] : null,
-        height: user != null ? user['height'] : null,
-        weight: user != null ? user['weight'] : null,
+        age: user != null && user['age'] != null
+            ? (user['age'] as num).toInt()
+            : null,
+        height: user != null && user['height'] != null
+            ? (user['height'] as num).toInt()
+            : null,
+        weight: user != null && user['weight'] != null
+            ? (user['weight'] as num).toInt()
+            : null,
       );
     } else {
       state = state.copyWith(
@@ -173,9 +179,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
           bodyShape: bodyShape,
           token: result['token'],
           username: user != null ? user['username'] : username,
-          age: user != null ? user['age'] : age,
-          height: user != null ? user['height'] : height,
-          weight: user != null ? user['weight'] : weight,
+          age: user != null && user['age'] != null
+              ? (user['age'] as num).toInt()
+              : age,
+          height: user != null && user['height'] != null
+              ? (user['height'] as num).toInt()
+              : height,
+          weight: user != null && user['weight'] != null
+              ? (user['weight'] as num).toInt()
+              : weight,
         );
       } else {
         state = state.copyWith(isLoading: false);
@@ -207,8 +219,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final user = result['user'];
       state = state.copyWith(
         isLoading: false,
-        height: user != null ? user['height'] : height,
-        weight: user != null ? user['weight'] : weight,
+        height: user != null && user['height'] != null
+            ? (user['height'] as num).toInt()
+            : height,
+        weight: user != null && user['weight'] != null
+            ? (user['weight'] as num).toInt()
+            : weight,
         gender: user != null ? user['gender'] : gender,
         bodyShape: user != null ? user['body_shape'] : bodyShape,
       );

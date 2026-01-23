@@ -233,11 +233,12 @@ class ApiService {
       await prefs.setString('user_gender', user['gender']);
     if (user['body_shape'] != null)
       await prefs.setString('user_body_shape', user['body_shape']);
-    if (user['age'] != null) await prefs.setInt('user_age', user['age']);
+    if (user['age'] != null)
+      await prefs.setInt('user_age', (user['age'] as num).toInt());
     if (user['height'] != null)
-      await prefs.setInt('user_height', user['height']);
+      await prefs.setInt('user_height', (user['height'] as num).toInt());
     if (user['weight'] != null)
-      await prefs.setInt('user_weight', user['weight']);
+      await prefs.setInt('user_weight', (user['weight'] as num).toInt());
   }
 
   Future<Map<String, dynamic>?> getUserData() async {
