@@ -42,7 +42,7 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Wardrobe'),
+        title: const Text('My Closet'),
         bottom: TabBar(
           controller: _wardrobeTabController,
           isScrollable: true,
