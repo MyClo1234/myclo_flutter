@@ -1,14 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 
 import '../theme/app_theme.dart';
-import 'item_detail_screen.dart';
-import 'wardrobe_new_screen.dart';
-import '../providers/wardrobe_provider.dart';
-
-import '../services/api_service.dart'; // Needed for ApiService.baseUrl if static
 import '../providers/auth_provider.dart';
 import '../utils/responsive_helper.dart';
 
@@ -22,10 +16,8 @@ class ProfileScreen extends ConsumerStatefulWidget {
 class _ProfileScreenState extends ConsumerState<ProfileScreen>
     with TickerProviderStateMixin {
   late TabController _tabController;
-  late TabController _wardrobeTabController;
 
-  final List<String> _tabs = ['profile', 'wardrobe', 'calendar', 'settings'];
-  final List<String> _wardrobeSubTabs = ['All', 'Tops', 'Bottoms'];
+  final List<String> _tabs = ['profile', 'calendar', 'settings'];
 
   @override
   void initState() {
@@ -35,17 +27,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
       length: _tabs.length,
       vsync: this,
     );
-    _wardrobeTabController = TabController(
-      initialIndex: 0,
-      length: _wardrobeSubTabs.length,
-      vsync: this,
-    );
   }
 
   @override
   void dispose() {
     _tabController.dispose();
-    _wardrobeTabController.dispose();
     super.dispose();
   }
 
@@ -134,34 +120,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
             controller: _tabController,
             children: [
               _buildProfileTab(),
-              _buildWardrobeTab(),
               _buildCalendarTab(),
               _buildSettingsTab(),
             ],
           ),
         ),
-      ),
-      floatingActionButton: AnimatedBuilder(
-        animation: _tabController,
-        builder: (context, child) {
-          return _tabController.index == 1
-              ? FloatingActionButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const WardrobeNewScreen(),
-                      ),
-                    ).then((_) {
-                      ref.read(wardrobeProvider.notifier).refresh();
-                    });
-                  },
-                  backgroundColor: Colors.white,
-                  foregroundColor: Colors.black,
-                  child: const Icon(LucideIcons.plus),
-                )
-              : const SizedBox.shrink();
-        },
       ),
     );
   }
@@ -169,7 +132,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   Widget _buildTab(String label) {
     final map = {
       'profile': 'Body Profile',
-      'wardrobe': 'Wardrobe',
       'calendar': 'Calendar',
       'settings': 'Settings',
     };
@@ -192,35 +154,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
               style: TextStyle(
                 color: isSelected ? Colors.black : Colors.white60,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildWardrobeSubTab(String label) {
-    return Tab(
-      child: AnimatedBuilder(
-        animation: _wardrobeTabController,
-        builder: (context, child) {
-          // Simple text tabs for sub-categories
-          final isSelected =
-              _wardrobeSubTabs.indexOf(label) == _wardrobeTabController.index;
-          return Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              border: Border.all(
-                color: isSelected ? AppTheme.primary : Colors.transparent,
-              ),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? AppTheme.primary : Colors.white70,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),
             ),
           );
@@ -270,7 +203,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
           ],
         ),
         const SizedBox(height: 16),
-        // Display Current Body Shape
         if (authState.bodyShape != null) ...[
           Container(
             padding: const EdgeInsets.all(16),
@@ -336,7 +268,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   }
 
   String _formatBodyShape(String shape) {
-    // Example: body_shape_1.png -> Type 1
     final name = shape.split('.').first;
     final parts = name.split('_');
     if (parts.length >= 3) {
@@ -353,7 +284,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
       text: authState.weight?.toString() ?? '',
     );
     String? selectedBodyShape = authState.bodyShape;
-    // Fallback if null, though it shouldn't be if registered correctly
     final gender = authState.gender ?? 'man';
 
     final List<String> shapes = gender == 'man'
@@ -575,135 +505,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     );
   }
 
-  Widget _buildWardrobeTab() {
-    return Column(
-      children: [
-        SizedBox(
-          height: 60,
-          child: TabBar(
-            controller: _wardrobeTabController,
-            isScrollable: true,
-            indicatorColor: Colors.transparent,
-            dividerColor: Colors.transparent,
-            labelPadding: const EdgeInsets.symmetric(horizontal: 4),
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            tabs: _wardrobeSubTabs
-                .map((tab) => _buildWardrobeSubTab(tab))
-                .toList(),
-          ),
-        ),
-        Expanded(
-          child: TabBarView(
-            controller: _wardrobeTabController,
-            children: _wardrobeSubTabs.map((currentTab) {
-              return _buildWardrobeGrid(currentTab);
-            }).toList(),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildWardrobeGrid(String category) {
-    final itemsAsync = ref.watch(wardrobeProvider);
-
-    return itemsAsync.when(
-      data: (allItems) {
-        final items = category == 'All'
-            ? allItems
-            : allItems
-                  .where(
-                    (i) => i.category == category || i.subCategory == category,
-                  )
-                  .toList();
-
-        if (items.isEmpty) {
-          return Center(
-            child: Text(
-              'No items in $category',
-              style: const TextStyle(color: Colors.white54),
-            ),
-          );
-        }
-
-        final isWeb = ResponsiveHelper.isWeb(context);
-
-        return GridView.builder(
-          padding: const EdgeInsets.all(24),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: isWeb ? 4 : 2,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 0.75, // Better aspect ratio for images
-          ),
-          itemCount: items.length,
-          itemBuilder: (context, index) {
-            final item = items[index];
-            return GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ItemDetailScreen(item: item),
-                  ),
-                );
-              },
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.05),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    if (item.imageUrl != null)
-                      CachedNetworkImage(
-                        imageUrl: '${ApiService.baseUrl}${item.imageUrl}',
-                        fit: BoxFit.cover,
-                        errorWidget: (_, __, ___) => const Center(
-                          child: Text('👔', style: TextStyle(fontSize: 24)),
-                        ),
-                      )
-                    else
-                      const Center(
-                        child: Text('👔', style: TextStyle(fontSize: 24)),
-                      ),
-                    Positioned(
-                      bottom: 0,
-                      left: 0,
-                      right: 0,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        color: Colors.black54,
-                        child: Text(
-                          item.name,
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: Colors.white,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-      loading: () => const Center(
-        child: CircularProgressIndicator(color: AppTheme.primary),
-      ),
-      error: (e, s) => Center(
-        child: Text('Error: $e', style: const TextStyle(color: Colors.red)),
-      ),
-    );
-  }
-
   Widget _buildCalendarTab() {
     return const Center(child: Text('Calendar - Coming Soon'));
   }
@@ -795,7 +596,7 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
     bool overlapsContent,
   ) {
     return Container(
-      color: AppTheme.bgDark, // Sticky header background
+      color: AppTheme.bgDark,
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: _tabBar,
     );

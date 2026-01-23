@@ -32,6 +32,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   final ScrollController _scrollController = ScrollController();
   bool _isTyping = false;
   bool _showHistory = false;
+  int _weatherCode = 2; // 0: Sun, 1: Rain, 2: Snow
 
   @override
   void initState() {
@@ -204,23 +205,53 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: AppTheme.borderLight),
             ),
-            child: const Column(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Icon(LucideIcons.cloudRain, color: Colors.blueAccent),
+                Icon(
+                  _weatherCode == 0
+                      ? LucideIcons.sun
+                      : _weatherCode == 1
+                      ? LucideIcons.cloudRain
+                      : LucideIcons.snowflake,
+                  color: _weatherCode == 0
+                      ? Colors.orangeAccent
+                      : _weatherCode == 1
+                      ? Colors.blueAccent
+                      : Colors.lightBlueAccent,
+                ),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      '18°C',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    Row(
+                      children: [
+                        const Text(
+                          '22°',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFFFF6B6B), // Soft Red for Max
+                          ),
+                        ),
+                        Text(
+                          ' / ',
+                          style: TextStyle(
+                            color: AppTheme.textMuted.withOpacity(0.5),
+                          ),
+                        ),
+                        const Text(
+                          '12°',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF4DABF7), // Soft Blue for Min
+                          ),
+                        ),
+                      ],
                     ),
-                    Text(
-                      'Rainy intervals',
+                    const Text(
+                      'Max / Min',
                       style: TextStyle(fontSize: 12, color: AppTheme.textMuted),
                     ),
                   ],
