@@ -19,7 +19,15 @@ jobs:
         with:
           submodules: true
           lfs: false
-      - name: Build And Deploy
+      - name: Build Web
+        run: flutter build web --release
+
+      - name: Inspect Build Directory
+        run: |
+          ls -al
+          ls -al build
+          ls -al build/web || echo "build/web not found"
+      - name: Deploy Static Web App
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
         with:
