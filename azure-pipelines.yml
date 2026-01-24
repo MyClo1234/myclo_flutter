@@ -3,7 +3,7 @@ trigger:
 - dev
 
 pool:
-  name: 'codify-self-host-ci-cd'
+  vmImage: 'ubuntu-latest'
 
 steps:
   - checkout: self
