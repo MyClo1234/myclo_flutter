@@ -7,6 +7,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../theme/app_theme.dart';
 import 'outfit_detail_screen.dart';
 import '../providers/recommendation_provider.dart';
+import '../providers/weather_provider.dart';
 import '../providers/auth_provider.dart';
 
 import '../services/api_service.dart';
@@ -38,6 +39,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     super.initState();
     // Initial fetch handled by provider build or can be triggered here
     // ref.read(recommendationProvider.notifier).refresh(); // optional
+    // Weather fetch is auto-triggered by provider initialization, but can be manual if needed
   }
 
   void _handleSend() {
@@ -193,6 +195,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildInfoCards() {
+    final weatherState = ref.watch(weatherProvider);
+
     return Row(
       children: [
         Expanded(
@@ -204,28 +208,100 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: AppTheme.borderLight),
             ),
-            child: const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Icon(LucideIcons.cloudRain, color: Colors.blueAccent),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '18°C',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
+            child: weatherState.when(
+              data: (state) {
+                final weather = state.weather;
+                final cityName = state.cityName;
+
+                if (weather == null) {
+                  return const Center(
+                    child: Text(
+                      'No Data',
+                      style: TextStyle(color: Colors.white54),
                     ),
+                  );
+                }
+                final icon = getWeatherIcon(weather.rainType);
+                final desc = getWeatherDescription(weather.rainType);
+                final tempRange =
+                    '${weather.minTemp?.round()}° / ${weather.maxTemp?.round()}°';
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Icon(icon, color: Colors.blueAccent),
+                        if (cityName != null)
+                          Text(
+                            cityName,
+                            style: const TextStyle(
+                              color: Colors.blueAccent,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                            ),
+                          ),
+                      ],
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          tempRange,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          desc,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.textMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                );
+              },
+              loading: () => const Center(
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              error: (err, stack) => Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(LucideIcons.alertCircle, color: Colors.red.shade300),
+                    const SizedBox(height: 8),
                     Text(
-                      'Rainy intervals',
-                      style: TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                      err.toString(),
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 10,
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    InkWell(
+                      onTap: () {
+                        ref.read(weatherProvider.notifier).fetchWeather();
+                      },
+                      child: const Padding(
+                        padding: EdgeInsets.all(4.0),
+                        child: Icon(
+                          LucideIcons.refreshCcw,
+                          size: 14,
+                          color: Colors.white,
+                        ),
+                      ),
                     ),
                   ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
