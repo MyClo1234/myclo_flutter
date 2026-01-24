@@ -13,9 +13,7 @@ class ApiService {
   static String get baseUrl {
     if (kIsWeb) {
       if (kReleaseMode) {
-        // In production (Azure SWA), API is at the same origin /api
-        // We return empty string so Uri.parse('$baseUrl/api/...') becomes '/api/...'
-        return '';
+        return 'https://codify-functions-backend-gzaydqgch0ccbdfe.koreacentral-01.azurewebsites.net';
       }
       return 'http://localhost:7071';
     } else if (Platform.isAndroid) {
