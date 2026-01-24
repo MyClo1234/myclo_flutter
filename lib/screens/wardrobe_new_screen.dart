@@ -65,16 +65,14 @@ class _WardrobeNewScreenState extends ConsumerState<WardrobeNewScreen> {
           });
 
           // Extract Attributes (API Upload)
-          // API now accepts a list and returns a list
-          final dataList = await api.extractAttributes([fileObj.file]);
+          // API now returns ExtractionResponse (Map)
+          final response = await api.uploadImage(fileObj.file);
 
-          if (mounted && dataList.isNotEmpty) {
+          if (mounted) {
             setState(() {
               fileObj.status = 'completed';
-              // The API returns [{ "image_url": "...", "item_id": "..." }]
-              // attributes are not returned in the new schema, but we assign the map
-              // so we have the ID at least.
-              fileObj.attributes = dataList[0];
+              fileObj.attributes =
+                  response['attributes']; // Ensure backend returns 'attributes' key
               fileObj.progress = 100;
             });
 
@@ -144,12 +142,6 @@ class _WardrobeNewScreenState extends ConsumerState<WardrobeNewScreen> {
                 ],
               ),
             ),
-          ),
-          const SizedBox(height: 24),
-          OutlinedButton.icon(
-            onPressed: () => _pickImages(ImageSource.camera),
-            icon: const Icon(LucideIcons.camera),
-            label: const Text('Take Photo'),
           ),
         ],
       ),

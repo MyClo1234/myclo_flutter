@@ -4,6 +4,7 @@ import '../theme/app_theme.dart';
 import '../utils/responsive_helper.dart';
 import 'home_screen.dart';
 import 'profile_screen.dart';
+import 'wardrobe_screen.dart';
 import '../widgets/custom_navbar.dart';
 
 class MainWrapper extends StatefulWidget {
@@ -16,7 +17,11 @@ class MainWrapper extends StatefulWidget {
 class _MainWrapperState extends State<MainWrapper> {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = [const HomeScreen(), const ProfileScreen()];
+  final List<Widget> _screens = [
+    const HomeScreen(),
+    const WardrobeScreen(),
+    const ProfileScreen(),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -42,6 +47,10 @@ class _MainWrapperState extends State<MainWrapper> {
                 NavigationRailDestination(
                   icon: Icon(LucideIcons.home),
                   label: Text('Home'),
+                ),
+                NavigationRailDestination(
+                  icon: Icon(LucideIcons.shirt),
+                  label: Text('Wardrobe'),
                 ),
                 NavigationRailDestination(
                   icon: Icon(LucideIcons.user),

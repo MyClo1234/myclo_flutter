@@ -314,7 +314,7 @@ class ApiService {
     }
   }
 
-  Future<List<dynamic>> extractAttributes(List<XFile> images) async {
+  Future<Map<String, dynamic>> uploadImage(XFile image) async {
     try {
       final token = await getToken();
       var request = http.MultipartRequest(
@@ -325,34 +325,32 @@ class ApiService {
         request.headers['Authorization'] = 'Bearer $token';
       }
 
-      for (var imageFile in images) {
-        final mediaType = _getMediaType(imageFile.name);
+      final mediaType = _getMediaType(image.name);
 
-        if (kIsWeb) {
-          request.files.add(
-            http.MultipartFile.fromBytes(
-              'images',
-              await imageFile.readAsBytes(),
-              filename: imageFile.name,
-              contentType: mediaType,
-            ),
-          );
-        } else {
-          request.files.add(
-            await http.MultipartFile.fromPath(
-              'images',
-              imageFile.path,
-              contentType: mediaType,
-            ),
-          );
-        }
+      if (kIsWeb) {
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'image',
+            await image.readAsBytes(),
+            filename: image.name,
+            contentType: mediaType,
+          ),
+        );
+      } else {
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            'image',
+            image.path,
+            contentType: mediaType,
+          ),
+        );
       }
 
       var streamedResponse = await request.send();
       var response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 200) {
-        // Response is a list: [{ "image_url": "...", "item_id": "..." }, ...]
+        // Response is ExtractionResponse (Map)
         return json.decode(utf8.decode(response.bodyBytes));
       } else {
         final body = utf8.decode(response.bodyBytes);
