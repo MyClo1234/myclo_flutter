@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, kReleaseMode;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/weather_model.dart';
 
@@ -12,6 +12,11 @@ class ApiService {
 
   static String get baseUrl {
     if (kIsWeb) {
+      if (kReleaseMode) {
+        // In production (Azure SWA), API is at the same origin /api
+        // We return empty string so Uri.parse('$baseUrl/api/...') becomes '/api/...'
+        return '';
+      }
       return 'http://localhost:7071';
     } else if (Platform.isAndroid) {
       return 'http://10.0.2.2:7071';
