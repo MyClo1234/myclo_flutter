@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:myclo_flutter/api/core/api_client.dart';
 import '../services/api_service.dart';
 
 class AuthState {
