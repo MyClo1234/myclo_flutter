@@ -21,6 +21,7 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen>
     with SingleTickerProviderStateMixin {
   late TabController _wardrobeTabController;
   final List<String> _wardrobeSubTabs = ['All', 'Tops', 'Bottoms'];
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
@@ -29,12 +30,22 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen>
       length: _wardrobeSubTabs.length,
       vsync: this,
     );
+    _scrollController.addListener(_onScroll);
   }
 
   @override
   void dispose() {
     _wardrobeTabController.dispose();
+    _scrollController.dispose();
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      // Load more when user scrolls near the bottom
+      ref.read(wardrobeProvider.notifier).loadMore();
+    }
   }
 
   @override
@@ -106,12 +117,13 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen>
         final isWeb = ResponsiveHelper.isWeb(context);
 
         return GridView.builder(
-          padding: const EdgeInsets.all(24),
+          controller: _scrollController,
+          padding: EdgeInsets.zero, // Remove padding for edge-to-edge
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: isWeb ? 4 : 2,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 0.75,
+            crossAxisCount: isWeb ? 5 : 3, // 3 cols for mobile
+            crossAxisSpacing: 1, // Tiny spacing
+            mainAxisSpacing: 1,
+            childAspectRatio: 1.0, // Square
           ),
           itemCount: items.length,
           itemBuilder: (context, index) {
@@ -128,7 +140,7 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen>
               child: Container(
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.05),
-                  borderRadius: BorderRadius.circular(12),
+                  // No border radius for IG look
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: Stack(
@@ -136,35 +148,42 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen>
                   children: [
                     if (item.imageUrl != null)
                       CachedNetworkImage(
-                        imageUrl: '${ApiService.baseUrl}${item.imageUrl}',
+                        imageUrl: item.imageUrl!.startsWith('http')
+                            ? item.imageUrl!
+                            : '${ApiService.baseUrl}${item.imageUrl}',
                         fit: BoxFit.cover,
-                        errorWidget: (_, __, ___) => const Center(
-                          child: Text('👔', style: TextStyle(fontSize: 24)),
-                        ),
+                        memCacheWidth: 400, // Optimize memory for grid
+                        errorWidget: (context, url, error) {
+                          print(
+                            'Image Load Error for $url: $error',
+                          ); // Log to console
+                          return Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(
+                                  LucideIcons.alertCircle,
+                                  color: Colors.red,
+                                  size: 24,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Error',
+                                  style: const TextStyle(
+                                    color: Colors.red,
+                                    fontSize: 10,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
+                          );
+                        },
                       )
                     else
                       const Center(
                         child: Text('👔', style: TextStyle(fontSize: 24)),
                       ),
-                    Positioned(
-                      bottom: 0,
-                      left: 0,
-                      right: 0,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        color: Colors.black54,
-                        child: Text(
-                          item.name,
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: Colors.white,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ),
                   ],
                 ),
               ),

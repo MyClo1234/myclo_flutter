@@ -1,14 +1,55 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/item.dart';
 import '../services/api_service.dart';
+import '../providers/api_provider.dart';
 import '../theme/app_theme.dart';
 
-class ItemDetailScreen extends StatelessWidget {
+class ItemDetailScreen extends ConsumerStatefulWidget {
   final Item item;
 
   const ItemDetailScreen({super.key, required this.item});
+
+  @override
+  ConsumerState<ItemDetailScreen> createState() => _ItemDetailScreenState();
+}
+
+class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen> {
+  late Item _item;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _item = widget.item;
+    _fetchDetails();
+  }
+
+  Future<void> _fetchDetails() async {
+    try {
+      final api = ref.read(apiServiceProvider);
+      final json = await api.fetchWardrobeItemDetail(_item.id);
+
+      if (mounted) {
+        setState(() {
+          // Merge or replace. Since the API returns the full object structure:
+          // We need to parse it back to Item.
+          // Assuming Item.fromJson handles the partial fields properly.
+          _item = Item.fromJson(json);
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error fetching details: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,9 +60,11 @@ class ItemDetailScreen extends StatelessWidget {
             expandedHeight: 400,
             pinned: true,
             flexibleSpace: FlexibleSpaceBar(
-              background: item.imageUrl != null
+              background: _item.imageUrl != null
                   ? CachedNetworkImage(
-                      imageUrl: '${ApiService.baseUrl}${item.imageUrl}',
+                      imageUrl: _item.imageUrl!.startsWith('http')
+                          ? _item.imageUrl!
+                          : '${ApiService.baseUrl}${_item.imageUrl}',
                       fit: BoxFit.cover,
                     )
                   : Container(
@@ -49,14 +92,14 @@ class ItemDetailScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            item.subCategory,
+                            _item.subCategory,
                             style: const TextStyle(
                               fontSize: 14,
                               color: AppTheme.textMuted,
                             ),
                           ),
                           Text(
-                            item.name,
+                            _item.name,
                             style: const TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
@@ -101,13 +144,24 @@ class ItemDetailScreen extends StatelessWidget {
                   const SizedBox(height: 32),
 
                   // Details
-                  const Text(
-                    'DETAILS',
-                    style: TextStyle(
-                      color: AppTheme.textMuted,
-                      fontSize: 12,
-                      letterSpacing: 1.2,
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'DETAILS',
+                        style: TextStyle(
+                          color: AppTheme.textMuted,
+                          fontSize: 12,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                      if (_isLoading)
+                        const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                    ],
                   ),
                   const SizedBox(height: 16),
                   Container(
@@ -118,11 +172,12 @@ class ItemDetailScreen extends StatelessWidget {
                     ),
                     child: Column(
                       children: [
-                        _buildDetailRow('Category', item.category),
+                        _buildDetailRow('Category', _item.category),
                         const Divider(color: Colors.white10, height: 24),
-                        _buildDetailRow('Color', item.color),
+                        _buildDetailRow('Color', _item.color),
                         const Divider(color: Colors.white10, height: 24),
                         _buildDetailRow('Brand', 'Unknown'), // Mock
+                        // Add more fields if available from detailed fetch
                       ],
                     ),
                   ),

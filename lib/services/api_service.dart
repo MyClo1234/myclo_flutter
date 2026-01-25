@@ -2,8 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dart:io';
-import 'package:flutter/foundation.dart' show kIsWeb, kReleaseMode;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/weather_model.dart';
 
@@ -11,6 +10,16 @@ class ApiService {
   static const String _tokenKey = 'auth_token';
 
   static String get baseUrl {
+    // Local Development URL
+    // For Android Emulator: http://10.0.2.2:7071
+    // For iOS Simulator / macOS: http://127.0.0.1:7071
+    return 'http://127.0.0.1:7071';
+
+    // Production URL
+    // return 'https://codify-functions-backend-gzaydqgch0ccbdfe.koreacentral-01.azurewebsites.net';
+
+    // Previous configuration for reference:
+    /*
     if (kIsWeb) {
       if (kReleaseMode) {
         return 'https://codify-functions-backend-gzaydqgch0ccbdfe.koreacentral-01.azurewebsites.net';
@@ -21,6 +30,7 @@ class ApiService {
     } else {
       return 'http://localhost:7071';
     }
+    */
   }
 
   // --- Auth ---
@@ -295,11 +305,23 @@ class ApiService {
     }
   }
 
-  Future<Map<String, dynamic>> fetchWardrobeItems() async {
+  Future<Map<String, dynamic>> fetchWardrobeItems({
+    int skip = 0,
+    int limit = 20,
+    String? category, // Optional: for filtering directly from API if needed
+  }) async {
     try {
       final token = await getToken();
+
+      // Construct URL with query parameters
+      String url =
+          '$baseUrl/api/wardrobe/users/me/images?skip=$skip&limit=$limit';
+      if (category != null) {
+        url += '&category=$category';
+      }
+
       final response = await http.get(
-        Uri.parse('$baseUrl/api/wardrobe/items'),
+        Uri.parse(url),
         headers: token != null ? {'Authorization': 'Bearer $token'} : {},
       );
 
@@ -313,6 +335,27 @@ class ApiService {
       }
     } catch (e) {
       if (e is ApiException) rethrow; // Pass through ApiException
+      throw Exception('Failed to connect to server: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>> fetchWardrobeItemDetail(String itemId) async {
+    try {
+      final token = await getToken();
+      final url = '$baseUrl/api/wardrobe/items/$itemId';
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: token != null ? {'Authorization': 'Bearer $token'} : {},
+      );
+
+      if (response.statusCode == 200) {
+        return json.decode(utf8.decode(response.bodyBytes));
+      } else {
+        throw ApiException(response.statusCode, 'Failed to load item detail');
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
       throw Exception('Failed to connect to server: $e');
     }
   }
