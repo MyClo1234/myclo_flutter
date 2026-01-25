@@ -270,13 +270,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   }
 
   String _formatBodyShape(String shape) {
-    // Example: body_shape_1.png -> Type 1
+    // Convert filename to display name
     final name = shape.split('.').first;
-    final parts = name.split('_');
-    if (parts.length >= 3) {
-      return 'Type ${parts.last}';
-    }
-    return shape;
+    // Capitalize first letter
+    return name[0].toUpperCase() + name.substring(1);
   }
 
   void _showEditProfileDialog(BuildContext context, AuthState authState) {
@@ -291,20 +288,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     final gender = authState.gender ?? 'man';
 
     final List<String> shapes = gender == 'man'
-        ? [
-            'body_shape_1.png',
-            'body_shape_3.png',
-            'body_shape_4.png',
-            'body_shape_5.png',
-            'body_shape_6.png',
-          ]
-        : [
-            'body_shape_1.png',
-            'body_shape_2.png',
-            'body_shape_3.png',
-            'body_shape_5.png',
-            'body_shape_6.png',
-          ];
+        ? ['slim.png', 'round.png', 'normal.png', 'skinny.png', 'athletic.png']
+        : ['slim.png', 'normal.png', 'round.png', 'curvy.png', 'average.png'];
 
     showDialog(
       context: context,
