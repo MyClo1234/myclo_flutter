@@ -7,12 +7,19 @@ class ChatApi {
 
   Future<Map<String, dynamic>> sendMessage(
     String message,
-    String? userId,
-  ) async {
+    String? userId, {
+    double? lat,
+    double? lon,
+  }) async {
     try {
       final response = await _client.post(
         ApiConstants.chat,
-        body: {'query': message, 'user_id': userId},
+        body: {
+          'query': message,
+          'user_id': userId,
+          'lat': lat ?? 37.5665,
+          'lon': lon ?? 126.9780,
+        },
       );
 
       final decoded = json.decode(utf8.decode(response.bodyBytes));

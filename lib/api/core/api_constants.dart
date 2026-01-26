@@ -1,6 +1,8 @@
 class ApiConstants {
-  static const String baseUrlLocal = 'http://127.0.0.1:7071';
-  static const String baseUrlAndroid = 'http://10.0.2.2:7071';
+  static const String baseUrlLocal =
+      'https://codify-functions-backend-gzaydqgch0ccbdfe.koreacentral-01.azurewebsites.net';
+  static const String baseUrlAndroid =
+      'https://codify-functions-backend-gzaydqgch0ccbdfe.koreacentral-01.azurewebsites.net';
   static const String baseUrlProd =
       'https://codify-functions-backend-gzaydqgch0ccbdfe.koreacentral-01.azurewebsites.net';
 

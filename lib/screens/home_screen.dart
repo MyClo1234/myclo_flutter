@@ -6,13 +6,14 @@ import 'package:cached_network_image/cached_network_image.dart';
 
 import '../theme/app_theme.dart';
 import 'outfit_detail_screen.dart';
-import 'chat_screen.dart';
+
 import '../providers/recommendation_provider.dart';
 import '../providers/weather_provider.dart';
 import '../providers/auth_provider.dart';
 
 import '../services/api_service.dart';
 import '../utils/responsive_helper.dart';
+import '../providers/chat_provider.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -22,17 +23,8 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-  // Chat state
-  final List<Map<String, dynamic>> _messages = [
-    {
-      'id': 1,
-      'type': 'bot',
-      'text': 'Where are we going today? I can help you find the perfect look.',
-    },
-  ];
   final TextEditingController _chatController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  bool _isTyping = false;
 
   @override
   void initState() {
@@ -43,36 +35,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   void _handleSend() {
-    if (_chatController.text.trim().isEmpty) return;
+    final text = _chatController.text.trim();
+    if (text.isEmpty) return;
 
-    final text = _chatController.text;
-    setState(() {
-      _messages.add({
-        'id': DateTime.now().millisecondsSinceEpoch,
-        'type': 'user',
-        'text': text,
-      });
-      _chatController.clear();
-      _isTyping = true;
-    });
-
+    ref.read(chatProvider.notifier).sendMessage(text);
+    _chatController.clear();
     _scrollToBottom();
-
-    // Mock response
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        setState(() {
-          _isTyping = false;
-          _messages.add({
-            'id': DateTime.now().millisecondsSinceEpoch,
-            'type': 'bot',
-            'text':
-                "I've curated 3 outfits for your date night. Based on your preferences, I focused on a sleek, dark aesthetic.",
-          });
-        });
-        _scrollToBottom();
-      }
-    });
   }
 
   void _scrollToBottom() {
@@ -375,9 +343,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             .watch(recommendationProvider)
             .when(
               data: (todaysPick) {
-                if (todaysPick == null || todaysPick.outfit == null) {
+                if (todaysPick == null ||
+                    (todaysPick.outfit == null &&
+                        todaysPick.imageUrl == null)) {
                   return Container(
-                    height: 450,
+                    height: 600,
                     decoration: BoxDecoration(
                       color: AppTheme.bgCard.withOpacity(0.5),
                       borderRadius: BorderRadius.circular(24),
@@ -388,19 +358,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   );
                 }
 
-                final outfit = todaysPick.outfit!;
+                // If we have an outfit object, use it. Otherwise, we'll use top-level fields.
+                final outfit = todaysPick.outfit;
+                final imageUrl = todaysPick.imageUrl;
+                final reasoning = todaysPick.reasoning ?? outfit?.reasoning;
+                final score = todaysPick.score ?? outfit?.score ?? 0.0;
+                final styleDescription =
+                    outfit?.styleDescription ?? 'Today\'s Style';
 
                 return GestureDetector(
                   onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => OutfitDetailScreen(outfit: outfit),
-                      ),
-                    );
+                    if (outfit != null) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => OutfitDetailScreen(outfit: outfit),
+                        ),
+                      );
+                    }
                   },
                   child: Container(
-                    height: 450,
+                    height: 600,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(24),
                       boxShadow: [
@@ -416,50 +394,83 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         // Images
                         ClipRRect(
                           borderRadius: BorderRadius.circular(24),
-                          child: Column(
-                            children: [
-                              Expanded(
-                                child: outfit.top.imageUrl != null
-                                    ? CachedNetworkImage(
-                                        imageUrl:
-                                            '${ApiService.baseUrl}${outfit.top.imageUrl}', // Access baseUrl manually or via provider if exposed
-                                        fit: BoxFit.cover,
-                                        width: double.infinity,
-                                        errorWidget: (context, url, error) =>
-                                            Container(color: AppTheme.bgCard),
-                                      )
-                                    : Container(
+                          child: (imageUrl != null)
+                              ? CachedNetworkImage(
+                                  imageUrl: imageUrl.startsWith('http')
+                                      ? imageUrl
+                                      : '${ApiService.baseUrl}$imageUrl',
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                  placeholder: (context, url) => Container(
+                                    color: AppTheme.bgCard,
+                                    child: const Center(
+                                      child: CircularProgressIndicator(),
+                                    ),
+                                  ),
+                                  errorWidget: (context, url, error) =>
+                                      Container(
                                         color: AppTheme.bgCard,
-                                        child: const Center(
-                                          child: Text(
-                                            '👔',
-                                            style: TextStyle(fontSize: 40),
-                                          ),
+                                        child: const Icon(
+                                          LucideIcons.imageOff,
+                                          color: Colors.white24,
                                         ),
                                       ),
-                              ),
-                              Expanded(
-                                child: outfit.bottom.imageUrl != null
-                                    ? CachedNetworkImage(
-                                        imageUrl:
-                                            '${ApiService.baseUrl}${outfit.bottom.imageUrl}',
-                                        fit: BoxFit.cover,
-                                        width: double.infinity,
-                                        errorWidget: (context, url, error) =>
-                                            Container(color: AppTheme.bgCard),
-                                      )
-                                    : Container(
-                                        color: AppTheme.bgCard,
-                                        child: const Center(
-                                          child: Text(
-                                            '👖',
-                                            style: TextStyle(fontSize: 40),
-                                          ),
-                                        ),
-                                      ),
-                              ),
-                            ],
-                          ),
+                                )
+                              : Column(
+                                  children: [
+                                    Expanded(
+                                      child: outfit?.top.imageUrl != null
+                                          ? CachedNetworkImage(
+                                              imageUrl:
+                                                  '${ApiService.baseUrl}${outfit!.top.imageUrl}',
+                                              fit: BoxFit.cover,
+                                              width: double.infinity,
+                                              errorWidget:
+                                                  (context, url, error) =>
+                                                      Container(
+                                                        color: AppTheme.bgCard,
+                                                      ),
+                                            )
+                                          : Container(
+                                              color: AppTheme.bgCard,
+                                              child: const Center(
+                                                child: Text(
+                                                  '👔',
+                                                  style: TextStyle(
+                                                    fontSize: 40,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                    ),
+                                    Expanded(
+                                      child: outfit?.bottom.imageUrl != null
+                                          ? CachedNetworkImage(
+                                              imageUrl:
+                                                  '${ApiService.baseUrl}${outfit!.bottom.imageUrl}',
+                                              fit: BoxFit.cover,
+                                              width: double.infinity,
+                                              errorWidget:
+                                                  (context, url, error) =>
+                                                      Container(
+                                                        color: AppTheme.bgCard,
+                                                      ),
+                                            )
+                                          : Container(
+                                              color: AppTheme.bgCard,
+                                              child: const Center(
+                                                child: Text(
+                                                  '👖',
+                                                  style: TextStyle(
+                                                    fontSize: 40,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                    ),
+                                  ],
+                                ),
                         ),
 
                         // Text Overlay
@@ -497,8 +508,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        outfit.styleDescription ??
-                                            'Stylish Match',
+                                        styleDescription,
                                         style: const TextStyle(
                                           fontWeight: FontWeight.bold,
                                           fontSize: 18,
@@ -519,17 +529,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                         ),
                                       ),
                                       const SizedBox(height: 4),
-                                      Text(
-                                        '${outfit.top.color} & ${outfit.bottom.color}',
-                                        style: const TextStyle(
-                                          color: Colors.white70,
-                                          fontSize: 14,
+                                      if (outfit != null)
+                                        Text(
+                                          '${outfit.top.color} & ${outfit.bottom.color}',
+                                          style: const TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 14,
+                                          ),
                                         ),
-                                      ),
-                                      if (outfit.reasoning != null) ...[
+                                      if (reasoning != null) ...[
                                         const SizedBox(height: 8),
                                         Text(
-                                          outfit.reasoning!,
+                                          reasoning,
                                           maxLines: 2,
                                           overflow: TextOverflow.ellipsis,
                                           style: const TextStyle(
@@ -551,7 +562,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                             ),
                                           ),
                                           Text(
-                                            '${(outfit.score * 100).round()}%',
+                                            '${(score * 100).round()}%',
                                             style: const TextStyle(
                                               color: AppTheme.primary,
                                               fontWeight: FontWeight.bold,
@@ -572,7 +583,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 );
               },
               loading: () => Container(
-                height: 400,
+                height: 600,
                 decoration: BoxDecoration(
                   color: AppTheme.bgCard.withOpacity(0.5),
                   borderRadius: BorderRadius.circular(24),
@@ -582,7 +593,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
               ),
               error: (error, stack) => Container(
-                height: 400,
+                height: 600,
                 decoration: BoxDecoration(
                   color: AppTheme.bgCard.withOpacity(0.5),
                   borderRadius: BorderRadius.circular(24),
@@ -612,6 +623,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildChatSection() {
+    final chatState = ref.watch(chatProvider);
+
     return Column(
       children: [
         Row(
@@ -620,21 +633,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             Text('Chat with AI', style: Theme.of(context).textTheme.titleLarge),
             TextButton(
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const ChatScreen()),
-                );
+                ref.read(chatProvider.notifier).clearChat();
               },
               child: const Text(
-                'Open Chat',
-                style: TextStyle(color: AppTheme.primary),
+                'Clear History',
+                style: TextStyle(color: Colors.white54),
               ),
             ),
           ],
         ),
         const SizedBox(height: 16),
         Container(
-          height: 400,
+          height: 600,
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: AppTheme.bgCard.withOpacity(0.5),
@@ -646,10 +656,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               Expanded(
                 child: ListView.builder(
                   controller: _scrollController,
-                  itemCount: _messages.length,
+                  itemCount: chatState.messages.length,
                   itemBuilder: (context, index) {
-                    final msg = _messages[index];
-                    final isUser = msg['type'] == 'user';
+                    final msg = chatState.messages[index];
+                    final isUser = msg.isUser;
+
                     return Align(
                       alignment: isUser
                           ? Alignment.centerRight
@@ -657,7 +668,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       child: Container(
                         margin: const EdgeInsets.only(bottom: 12),
                         padding: const EdgeInsets.all(12),
-                        constraints: const BoxConstraints(maxWidth: 260),
+                        constraints: const BoxConstraints(maxWidth: 280),
                         decoration: BoxDecoration(
                           color: isUser
                               ? AppTheme.primary
@@ -668,7 +679,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           ),
                         ),
                         child: Text(
-                          msg['text'],
+                          msg.text,
                           style: TextStyle(
                             color: isUser ? Colors.black : Colors.white,
                             fontSize: 14,
@@ -679,7 +690,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   },
                 ),
               ),
-              if (_isTyping)
+              if (chatState.isLoading)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 8.0),
                   child: Align(
