@@ -288,18 +288,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
 
     final List<String> shapes = gender == 'man'
         ? [
-            'body_shape_1.png',
-            'body_shape_3.png',
-            'body_shape_4.png',
-            'body_shape_5.png',
-            'body_shape_6.png',
+            'slim.png',
+            'stocky.png',
+            'athletic.png',
+            'average.png',
+            'muscular.png',
           ]
         : [
-            'body_shape_1.png',
-            'body_shape_2.png',
-            'body_shape_3.png',
-            'body_shape_5.png',
-            'body_shape_6.png',
+            'slim.png',
+            'stocky.png',
+            'athletic.png',
+            'average.png',
+            'muscular.png',
           ];
 
     showDialog(
