@@ -2,21 +2,35 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/weather_model.dart';
 
 class ApiService {
   static const String _tokenKey = 'auth_token';
 
   static String get baseUrl {
+    // Local Development URL
+    // For Android Emulator: http://10.0.2.2:7071
+    // For iOS Simulator / macOS: http://127.0.0.1:7071
+    return 'http://127.0.0.1:7071';
+
+    // Production URL
+    // return 'https://codify-functions-backend-gzaydqgch0ccbdfe.koreacentral-01.azurewebsites.net';
+
+    // Previous configuration for reference:
+    /*
     if (kIsWeb) {
+      if (kReleaseMode) {
+        return 'https://codify-functions-backend-gzaydqgch0ccbdfe.koreacentral-01.azurewebsites.net';
+      }
       return 'http://localhost:7071';
     } else if (Platform.isAndroid) {
       return 'http://10.0.2.2:7071';
     } else {
       return 'http://localhost:7071';
     }
+    */
   }
 
   // --- Auth ---
@@ -291,11 +305,23 @@ class ApiService {
     }
   }
 
-  Future<Map<String, dynamic>> fetchWardrobeItems() async {
+  Future<Map<String, dynamic>> fetchWardrobeItems({
+    int skip = 0,
+    int limit = 20,
+    String? category, // Optional: for filtering directly from API if needed
+  }) async {
     try {
       final token = await getToken();
+
+      // Construct URL with query parameters
+      String url =
+          '$baseUrl/api/wardrobe/users/me/images?skip=$skip&limit=$limit';
+      if (category != null) {
+        url += '&category=$category';
+      }
+
       final response = await http.get(
-        Uri.parse('$baseUrl/api/wardrobe/items'),
+        Uri.parse(url),
         headers: token != null ? {'Authorization': 'Bearer $token'} : {},
       );
 
@@ -313,7 +339,28 @@ class ApiService {
     }
   }
 
-  Future<List<dynamic>> extractAttributes(List<XFile> images) async {
+  Future<Map<String, dynamic>> fetchWardrobeItemDetail(String itemId) async {
+    try {
+      final token = await getToken();
+      final url = '$baseUrl/api/wardrobe/items/$itemId';
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: token != null ? {'Authorization': 'Bearer $token'} : {},
+      );
+
+      if (response.statusCode == 200) {
+        return json.decode(utf8.decode(response.bodyBytes));
+      } else {
+        throw ApiException(response.statusCode, 'Failed to load item detail');
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw Exception('Failed to connect to server: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>> uploadImage(XFile image) async {
     try {
       final token = await getToken();
       var request = http.MultipartRequest(
@@ -324,34 +371,32 @@ class ApiService {
         request.headers['Authorization'] = 'Bearer $token';
       }
 
-      for (var imageFile in images) {
-        final mediaType = _getMediaType(imageFile.name);
+      final mediaType = _getMediaType(image.name);
 
-        if (kIsWeb) {
-          request.files.add(
-            http.MultipartFile.fromBytes(
-              'images',
-              await imageFile.readAsBytes(),
-              filename: imageFile.name,
-              contentType: mediaType,
-            ),
-          );
-        } else {
-          request.files.add(
-            await http.MultipartFile.fromPath(
-              'images',
-              imageFile.path,
-              contentType: mediaType,
-            ),
-          );
-        }
+      if (kIsWeb) {
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'image',
+            await image.readAsBytes(),
+            filename: image.name,
+            contentType: mediaType,
+          ),
+        );
+      } else {
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            'image',
+            image.path,
+            contentType: mediaType,
+          ),
+        );
       }
 
       var streamedResponse = await request.send();
       var response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 200) {
-        // Response is a list: [{ "image_url": "...", "item_id": "..." }, ...]
+        // Response is ExtractionResponse (Map)
         return json.decode(utf8.decode(response.bodyBytes));
       } else {
         final body = utf8.decode(response.bodyBytes);
@@ -361,6 +406,28 @@ class ApiService {
     } catch (e) {
       if (e is ApiException) rethrow;
       throw Exception('Error uploading image: $e');
+    }
+  }
+
+  Future<DailyWeather> getDailyWeather(double lat, double lon) async {
+    try {
+      final token = await getToken();
+      // Changed to pass lat/lon instead of nx/ny. Backend handles mapping.
+      final url = '$baseUrl/api/today/summary?lat=$lat&lon=$lon';
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: token != null ? {'Authorization': 'Bearer $token'} : {},
+      );
+
+      if (response.statusCode == 200) {
+        final decoded = json.decode(utf8.decode(response.bodyBytes));
+        return DailyWeather.fromJson(decoded);
+      } else {
+        throw Exception('Failed to load weather data');
+      }
+    } catch (e) {
+      throw Exception('Failed to connect to server: $e');
     }
   }
 

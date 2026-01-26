@@ -7,6 +7,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../theme/app_theme.dart';
 import 'outfit_detail_screen.dart';
 import '../providers/recommendation_provider.dart';
+import '../providers/weather_provider.dart';
 import '../providers/auth_provider.dart';
 
 import '../services/api_service.dart';
@@ -32,13 +33,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   final ScrollController _scrollController = ScrollController();
   bool _isTyping = false;
   bool _showHistory = false;
-  int _weatherCode = 2; // 0: Sun, 1: Rain, 2: Snow
 
   @override
   void initState() {
     super.initState();
     // Initial fetch handled by provider build or can be triggered here
     // ref.read(recommendationProvider.notifier).refresh(); // optional
+    // Weather fetch is auto-triggered by provider initialization, but can be manual if needed
   }
 
   void _handleSend() {
@@ -194,6 +195,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildInfoCards() {
+    final weatherState = ref.watch(weatherProvider);
+
     return Row(
       children: [
         Expanded(
@@ -205,58 +208,100 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: AppTheme.borderLight),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Icon(
-                  _weatherCode == 0
-                      ? LucideIcons.sun
-                      : _weatherCode == 1
-                      ? LucideIcons.cloudRain
-                      : LucideIcons.snowflake,
-                  color: _weatherCode == 0
-                      ? Colors.orangeAccent
-                      : _weatherCode == 1
-                      ? Colors.blueAccent
-                      : Colors.lightBlueAccent,
-                ),
-                Column(
+            child: weatherState.when(
+              data: (state) {
+                final weather = state.weather;
+                final cityName = state.cityName;
+
+                if (weather == null) {
+                  return const Center(
+                    child: Text(
+                      'No Data',
+                      style: TextStyle(color: Colors.white54),
+                    ),
+                  );
+                }
+                final icon = getWeatherIcon(weather.rainType);
+                final desc = getWeatherDescription(weather.rainType);
+                final tempRange =
+                    '${weather.minTemp?.round()}° / ${weather.maxTemp?.round()}°';
+
+                return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          '22°',
-                          style: TextStyle(
-                            fontSize: 20,
+                        Icon(icon, color: Colors.blueAccent),
+                        if (cityName != null)
+                          Text(
+                            cityName,
+                            style: const TextStyle(
+                              color: Colors.blueAccent,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                            ),
+                          ),
+                      ],
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          tempRange,
+                          style: const TextStyle(
+                            fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFFFF6B6B), // Soft Red for Max
                           ),
                         ),
                         Text(
-                          ' / ',
-                          style: TextStyle(
-                            color: AppTheme.textMuted.withOpacity(0.5),
-                          ),
-                        ),
-                        const Text(
-                          '12°',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF4DABF7), // Soft Blue for Min
+                          desc,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.textMuted,
                           ),
                         ),
                       ],
                     ),
-                    const Text(
-                      'Max / Min',
-                      style: TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                  ],
+                );
+              },
+              loading: () => const Center(
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              error: (err, stack) => Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(LucideIcons.alertCircle, color: Colors.red.shade300),
+                    const SizedBox(height: 8),
+                    Text(
+                      err.toString(),
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 10,
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    InkWell(
+                      onTap: () {
+                        ref.read(weatherProvider.notifier).fetchWeather();
+                      },
+                      child: const Padding(
+                        padding: EdgeInsets.all(4.0),
+                        child: Icon(
+                          LucideIcons.refreshCcw,
+                          size: 14,
+                          color: Colors.white,
+                        ),
+                      ),
                     ),
                   ],
                 ),
-              ],
+              ),
             ),
           ),
         ),

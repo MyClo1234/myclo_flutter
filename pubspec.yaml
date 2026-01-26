@@ -44,6 +44,7 @@ dependencies:
   flutter_riverpod: ^2.4.0
   camera: ^0.10.5
   permission_handler: ^11.0.0 # Often needed for camera permissions
+  geolocator: ^14.0.2
 
 dev_dependencies:
   flutter_test:

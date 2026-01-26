@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:lucide_icons/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 import '../theme/app_theme.dart';
-import 'item_detail_screen.dart';
-import 'wardrobe_new_screen.dart';
 import '../providers/wardrobe_provider.dart';
 import '../services/api_service.dart';
+import 'item_detail_screen.dart';
+import 'wardrobe_new_screen.dart';
 import '../utils/responsive_helper.dart';
 
 class WardrobeScreen extends ConsumerStatefulWidget {
@@ -18,24 +18,34 @@ class WardrobeScreen extends ConsumerStatefulWidget {
 }
 
 class _WardrobeScreenState extends ConsumerState<WardrobeScreen>
-    with TickerProviderStateMixin {
+    with SingleTickerProviderStateMixin {
   late TabController _wardrobeTabController;
   final List<String> _wardrobeSubTabs = ['All', 'Tops', 'Bottoms'];
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     _wardrobeTabController = TabController(
-      initialIndex: 0,
       length: _wardrobeSubTabs.length,
       vsync: this,
     );
+    _scrollController.addListener(_onScroll);
   }
 
   @override
   void dispose() {
     _wardrobeTabController.dispose();
+    _scrollController.dispose();
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      // Load more when user scrolls near the bottom
+      ref.read(wardrobeProvider.notifier).loadMore();
+    }
   }
 
   @override
@@ -43,24 +53,21 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen>
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Closet'),
+        backgroundColor: AppTheme.bgDark,
         bottom: TabBar(
           controller: _wardrobeTabController,
           isScrollable: true,
           indicatorColor: AppTheme.primary,
-          dividerColor: Colors.transparent,
-          labelPadding: const EdgeInsets.symmetric(horizontal: 16),
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+          labelColor: AppTheme.primary,
+          unselectedLabelColor: Colors.white70,
           tabs: _wardrobeSubTabs.map((tab) => Tab(text: tab)).toList(),
         ),
       ),
-      body: ResponsiveWrapper(
-        maxWidth: 1200,
-        child: TabBarView(
-          controller: _wardrobeTabController,
-          children: _wardrobeSubTabs.map((currentTab) {
-            return _buildWardrobeGrid(currentTab);
-          }).toList(),
-        ),
+      body: TabBarView(
+        controller: _wardrobeTabController,
+        children: _wardrobeSubTabs.map((currentTab) {
+          return _buildWardrobeGrid(currentTab);
+        }).toList(),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
@@ -71,7 +78,7 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen>
             ref.read(wardrobeProvider.notifier).refresh();
           });
         },
-        backgroundColor: Colors.white,
+        backgroundColor: AppTheme.primary,
         foregroundColor: Colors.black,
         child: const Icon(LucideIcons.plus),
       ),
@@ -93,9 +100,16 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen>
 
         if (items.isEmpty) {
           return Center(
-            child: Text(
-              'No items in $category',
-              style: const TextStyle(color: Colors.white54),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(LucideIcons.shirt, size: 48, color: Colors.white24),
+                const SizedBox(height: 16),
+                Text(
+                  'No items in $category',
+                  style: const TextStyle(color: Colors.white54),
+                ),
+              ],
             ),
           );
         }
@@ -103,12 +117,13 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen>
         final isWeb = ResponsiveHelper.isWeb(context);
 
         return GridView.builder(
-          padding: const EdgeInsets.all(24),
+          controller: _scrollController,
+          padding: EdgeInsets.zero, // Remove padding for edge-to-edge
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: isWeb ? 4 : 2,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 0.75,
+            crossAxisCount: isWeb ? 5 : 3, // 3 cols for mobile
+            crossAxisSpacing: 1, // Tiny spacing
+            mainAxisSpacing: 1,
+            childAspectRatio: 1.0, // Square
           ),
           itemCount: items.length,
           itemBuilder: (context, index) {
@@ -125,7 +140,7 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen>
               child: Container(
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.05),
-                  borderRadius: BorderRadius.circular(12),
+                  // No border radius for IG look
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: Stack(
@@ -133,11 +148,37 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen>
                   children: [
                     if (item.imageUrl != null)
                       CachedNetworkImage(
-                        imageUrl: '${ApiService.baseUrl}${item.imageUrl}',
+                        imageUrl: item.imageUrl!.startsWith('http')
+                            ? item.imageUrl!
+                            : '${ApiService.baseUrl}${item.imageUrl}',
                         fit: BoxFit.cover,
-                        errorWidget: (_, __, ___) => const Center(
-                          child: Text('👔', style: TextStyle(fontSize: 24)),
-                        ),
+                        memCacheWidth: 400, // Optimize memory for grid
+                        errorWidget: (context, url, error) {
+                          print(
+                            'Image Load Error for $url: $error',
+                          ); // Log to console
+                          return Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(
+                                  LucideIcons.alertCircle,
+                                  color: Colors.red,
+                                  size: 24,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Error',
+                                  style: const TextStyle(
+                                    color: Colors.red,
+                                    fontSize: 10,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
+                          );
+                        },
                       )
                     else
                       const Center(

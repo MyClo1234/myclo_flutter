@@ -32,6 +32,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   @override
   void dispose() {
     _tabController.dispose();
+
     super.dispose();
   }
 

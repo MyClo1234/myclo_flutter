@@ -1,30 +1,73 @@
-# azure-pipelines.yml
-
 trigger:
 - main
+- dev
 
 pool:
-  vmImage: 'codify-self-host-ci-cd'
+  name: 'codify-self-host-ci-cd'
 
 steps:
-# 1. Flutter SDK 설치 (가장 안정적인 방법: git clone)
-- script: |
-    git clone https://github.com/flutter/flutter.git -b stable --depth 1
-    echo "##vso[task.prependpath]$(Build.SourcesDirectory)/flutter/bin"
-  displayName: 'Install Flutter SDK'
+  - checkout: self
 
-# 2. 의존성 설치
-- script: |
-    flutter pub get
-  displayName: 'Install Dependencies'
+  # 0) Node / npm 확인
+  - task: Bash@3
+    displayName: "Check node/npm"
+    inputs:
+      targetType: "inline"
+      script: |
+        set -e
+        node -v
+        npm -v
 
-# 3. Android 빌드 (APK 생성)
-- script: |
-    flutter build apk --release
-  displayName: 'Build Android APK'
+  # 1) Flutter 설치/확인 (PATH 의존 X)
+  - task: Bash@3
+    displayName: "Install Flutter"
+    inputs:
+      targetType: "inline"
+      script: |
+        set -e
 
-# 4. iOS 빌드 (IPA 생성 - 서명 없이 빌드만 테스트)
-# 실제 배포를 하려면 인증서(Certificate) 설정이 필요합니다.
-- script: |
-    flutter build ios --release --no-codesign
-  displayName: 'Build iOS App (No Codesign)'
+        FLUTTER_DIR="$HOME/flutter"
+
+        # 이미 설치되어 있으면 재사용 (매번 clone 방지)
+        if [ ! -d "$FLUTTER_DIR/.git" ]; then
+          git clone https://github.com/flutter/flutter.git -b stable --depth 1 "$FLUTTER_DIR"
+        else
+          echo "Flutter already exists at $FLUTTER_DIR"
+        fi
+
+        "$FLUTTER_DIR/bin/flutter" --version
+        "$FLUTTER_DIR/bin/flutter" config --enable-web
+
+  # 2) 의존성 설치
+  - task: Bash@3
+    displayName: "Flutter pub get"
+    inputs:
+      targetType: "inline"
+      script: |
+        set -e
+        "$HOME/flutter/bin/flutter" pub get
+
+  # 3) 웹 빌드 (결과: build/web)
+  - task: Bash@3
+    displayName: "Build Flutter Web"
+    inputs:
+      targetType: "inline"
+      script: |
+        set -e
+        "$HOME/flutter/bin/flutter" build web --release
+
+        # Static Web Apps SPA 라우팅 설정 포함
+        cp staticwebapp.config.json build/web/staticwebapp.config.json
+
+        ls -al build/web
+
+  # 4) Static Web Apps로 배포 (npx 사용)
+  - task: Bash@3
+    displayName: "Deploy to Azure Static Web Apps"
+    env:
+      SWA_DEPLOYMENT_TOKEN: $(SWA_DEPLOYMENT_TOKEN)
+    inputs:
+      targetType: "inline"
+      script: |
+        set -e
+        npx -y @azure/static-web-apps-cli deploy ./build/web --deployment-token "$SWA_DEPLOYMENT_TOKEN"
