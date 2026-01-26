@@ -6,6 +6,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 
 import '../theme/app_theme.dart';
 import 'outfit_detail_screen.dart';
+import 'chat_screen.dart';
 import '../providers/recommendation_provider.dart';
 import '../providers/weather_provider.dart';
 import '../providers/auth_provider.dart';
@@ -32,7 +33,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   final TextEditingController _chatController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   bool _isTyping = false;
-  bool _showHistory = false;
 
   @override
   void initState() {
@@ -374,10 +374,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ref
             .watch(recommendationProvider)
             .when(
-              data: (outfit) {
-                if (outfit == null) {
-                  return const Center(child: Text('No outfit found'));
+              data: (todaysPick) {
+                if (todaysPick == null || todaysPick.outfit == null) {
+                  return Container(
+                    height: 450,
+                    decoration: BoxDecoration(
+                      color: AppTheme.bgCard.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: const Center(
+                      child: Text('No outfit found for today'),
+                    ),
+                  );
                 }
+
+                final outfit = todaysPick.outfit!;
+
                 return GestureDetector(
                   onTap: () {
                     Navigator.push(
@@ -492,6 +504,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                           fontSize: 18,
                                         ),
                                       ),
+                                      // Weather Summary from TodaysPick
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 4,
+                                        ),
+                                        child: Text(
+                                          todaysPick.weatherSummary,
+                                          style: const TextStyle(
+                                            color: AppTheme.primary,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ),
                                       const SizedBox(height: 4),
                                       Text(
                                         '${outfit.top.color} & ${outfit.bottom.color}',
@@ -594,11 +620,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             Text('Chat with AI', style: Theme.of(context).textTheme.titleLarge),
             TextButton(
               onPressed: () {
-                setState(() => _showHistory = !_showHistory);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ChatScreen()),
+                );
               },
-              child: Text(
-                _showHistory ? 'Chat' : 'History',
-                style: const TextStyle(color: AppTheme.primary),
+              child: const Text(
+                'Open Chat',
+                style: TextStyle(color: AppTheme.primary),
               ),
             ),
           ],

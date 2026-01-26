@@ -6,6 +6,7 @@ class AuthState {
   final bool isAuthenticated;
   final bool isLoading;
   final String? error;
+  final String? id; // Add user ID
   final String? gender;
   final String? bodyShape;
   final String? token;
@@ -18,6 +19,7 @@ class AuthState {
     this.isAuthenticated = false,
     this.isLoading = false,
     this.error,
+    this.id,
     this.gender,
     this.bodyShape,
     this.token,
@@ -31,6 +33,7 @@ class AuthState {
     bool? isAuthenticated,
     bool? isLoading,
     String? error,
+    String? id,
     String? gender,
     String? bodyShape,
     String? token,
@@ -43,6 +46,7 @@ class AuthState {
       isAuthenticated: isAuthenticated ?? this.isAuthenticated,
       isLoading: isLoading ?? this.isLoading,
       error: error,
+      id: id ?? this.id,
       gender: gender ?? this.gender,
       bodyShape: bodyShape ?? this.bodyShape,
       token: token ?? this.token,
@@ -59,6 +63,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   AuthNotifier() : super(AuthState()) {
     _checkLoginStatus();
+
+    // Listen for global 401 errors
+    ApiClient().onAuthError.listen((_) {
+      print("Received global 401 event. Logging out.");
+      logout();
+    });
   }
 
   Future<void> _checkLoginStatus() async {
@@ -70,6 +80,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = state.copyWith(
         isAuthenticated: true,
         token: token,
+        id: userData['id'],
         username: userData['username'],
         gender: userData['gender'],
         bodyShape: userData['body_shape'],
@@ -111,6 +122,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         isLoading: false,
         isAuthenticated: true,
         token: token,
+        id: user != null ? user['id'] : null,
         username: user != null ? user['username'] : username,
         gender: user != null ? user['gender'] : null,
         bodyShape: user != null ? user['body_shape'] : null,
@@ -170,7 +182,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
               'age': age,
               'height': height,
               'weight': weight,
+              // id might be missing here if register doesn't return it
             };
+        if (user != null && user['id'] != null) {
+          userMap['id'] = user['id'];
+        }
         await _apiService.saveUserData(userMap);
 
         state = state.copyWith(
@@ -179,6 +195,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
           gender: gender,
           bodyShape: bodyShape,
           token: result['token'],
+          id: user != null ? user['id'] : null,
           username: user != null ? user['username'] : username,
           age: user != null && user['age'] != null
               ? (user['age'] as num).toInt()

@@ -18,4 +18,16 @@ class RecommendationApi {
       throw Exception('Failed to load outfit recommendations: $e');
     }
   }
+
+  Future<Map<String, dynamic>> fetchTodaysPick(double lat, double lon) async {
+    try {
+      final response = await _client.post(
+        ApiConstants.todaysPick,
+        body: {'lat': lat, 'lon': lon},
+      );
+      return json.decode(utf8.decode(response.bodyBytes));
+    } catch (e) {
+      throw Exception('Failed to load todays pick: $e');
+    }
+  }
 }

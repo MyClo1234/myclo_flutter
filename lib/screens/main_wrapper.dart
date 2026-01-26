@@ -52,6 +52,7 @@ class _MainWrapperState extends State<MainWrapper> {
                   icon: Icon(LucideIcons.shirt),
                   label: Text('Wardrobe'),
                 ),
+
                 NavigationRailDestination(
                   icon: Icon(LucideIcons.user),
                   label: Text('Profile'),

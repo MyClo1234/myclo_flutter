@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
@@ -126,7 +127,15 @@ class ApiClient {
   // Multipart helper can be added specifically in module needing it, or here generically.
   // For now we keep it simple.
 
+  // Auth Error Stream
+  final _authErrorController = StreamController<void>.broadcast();
+  Stream<void> get onAuthError => _authErrorController.stream;
+
   void _checkStatusCode(http.Response response) {
+    if (response.statusCode == 401) {
+      _authErrorController.add(null);
+    }
+
     if (response.statusCode >= 400) {
       // Basic exception throwing. Can be enhanced with custom exceptions.
       throw ApiException(response.statusCode, response.body);

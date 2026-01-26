@@ -107,6 +107,13 @@ class ApiService {
     );
   }
 
+  Future<Map<String, dynamic>> fetchTodaysPick({
+    required double lat,
+    required double lon,
+  }) {
+    return _recommendationApi.fetchTodaysPick(lat, lon);
+  }
+
   // --- Persistence (Keep here for now or move to Refactored Auth/User Repository) ---
   Future<void> saveUserData(Map<String, dynamic> user) async {
     final prefs = await SharedPreferences.getInstance();

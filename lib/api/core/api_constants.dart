@@ -15,5 +15,7 @@ class ApiConstants {
   static const String wardrobeUsersMe = '/api/wardrobe/users/me/images';
   static const String wardrobeItems = '/api/wardrobe/items';
   static const String recommendOutfit = '/api/recommend/outfit';
+  static const String todaysPick = '/api/recommend/todays-pick';
   static const String weatherSummary = '/api/today/summary';
+  static const String chat = '/api/chat';
 }

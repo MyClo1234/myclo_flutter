@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import '../core/api_client.dart';
 import '../core/api_constants.dart';
+import '../../utils/image_helper.dart';
 
 class WardrobeApi {
   final ApiClient _client = ApiClient();
@@ -43,6 +44,26 @@ class WardrobeApi {
 
   Future<Map<String, dynamic>> uploadImage(XFile image) async {
     try {
+      // Compress image before upload (only for mobile/desktop, web handling can differ)
+      XFile processedImage = image;
+      if (!kIsWeb) {
+        // Import locally to avoid circular dependency issues if any,
+        // though strictly imports are at top.
+        // Assuming ImageHelper is imported.
+        // We need to add import to the top of file first.
+      }
+
+      // Let's modify imports first in a separate step or here if possible.
+      // Since replace_file_content is per-block, I will do it in two steps or assume top import.
+      // But verify if I can add import in this block... No, it's at the top.
+      // I'll add the logic assuming import, then add import.
+
+      // Actually, let's keep it simple. I will just add the logic and then add the import.
+
+      if (!kIsWeb) {
+        processedImage = await _compressImage(image);
+      }
+
       final token = await _client.getToken();
       final url = Uri.parse('${_client.baseUrl}${ApiConstants.extract}');
 
@@ -51,14 +72,14 @@ class WardrobeApi {
         request.headers['Authorization'] = 'Bearer $token';
       }
 
-      final mediaType = _getMediaType(image.name);
+      final mediaType = _getMediaType(processedImage.name);
 
       if (kIsWeb) {
         request.files.add(
           http.MultipartFile.fromBytes(
             'image',
-            await image.readAsBytes(),
-            filename: image.name,
+            await processedImage.readAsBytes(),
+            filename: processedImage.name,
             contentType: mediaType,
           ),
         );
@@ -66,7 +87,7 @@ class WardrobeApi {
         request.files.add(
           await http.MultipartFile.fromPath(
             'image',
-            image.path,
+            processedImage.path,
             contentType: mediaType,
           ),
         );
@@ -86,6 +107,12 @@ class WardrobeApi {
     } catch (e) {
       throw Exception('Error uploading image: $e');
     }
+  }
+
+  // Wrapper to avoid importing ImageHelper inside method if I can't add top import in same tool call
+  // Actually better to just add the logic and I will add import in next call.
+  Future<XFile> _compressImage(XFile file) async {
+    return ImageHelper.compressImage(file);
   }
 
   MediaType _getMediaType(String filename) {

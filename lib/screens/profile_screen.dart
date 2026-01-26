@@ -383,7 +383,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    'Type ${index + 1}',
+                                    _formatBodyShape(shape),
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: isSelected

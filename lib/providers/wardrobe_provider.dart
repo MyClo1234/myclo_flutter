@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/item.dart';
 import 'api_provider.dart';
+import 'auth_provider.dart';
 
 class WardrobeNotifier extends AsyncNotifier<List<Item>> {
   static const String _cacheKey = 'wardrobe_cache';
@@ -18,6 +19,14 @@ class WardrobeNotifier extends AsyncNotifier<List<Item>> {
 
   @override
   Future<List<Item>> build() async {
+    // 0. Wait for authentication
+    final authState = ref.watch(authProvider);
+
+    // If not authenticated or still loading auth state, return empty or wait
+    if (!authState.isAuthenticated) {
+      return [];
+    }
+
     _currentSkip = 0;
     _hasMore = true;
     _isLoadingMore = false;
