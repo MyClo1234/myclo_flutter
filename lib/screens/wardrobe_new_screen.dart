@@ -22,18 +22,10 @@ class _WardrobeNewScreenState extends ConsumerState<WardrobeNewScreen> {
 
   Future<void> _pickImages(ImageSource source) async {
     try {
-      final List<XFile> pickedFiles;
-      if (source == ImageSource.gallery) {
-        pickedFiles = await _picker.pickMultiImage();
-      } else {
-        final XFile? photo = await _picker.pickImage(
-          source: ImageSource.camera,
-        );
-        pickedFiles = photo != null ? [photo] : [];
-      }
+      final XFile? pickedFile = await _picker.pickImage(source: source);
 
-      if (pickedFiles.isNotEmpty) {
-        _addFiles(pickedFiles);
+      if (pickedFile != null) {
+        _addFiles([pickedFile]);
       }
     } catch (e) {
       print('Error picking images: $e');

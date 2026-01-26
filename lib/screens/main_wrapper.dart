@@ -3,6 +3,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../theme/app_theme.dart';
 import '../utils/responsive_helper.dart';
 import 'home_screen.dart';
+import 'wardrobe_screen.dart';
 import 'profile_screen.dart';
 import 'wardrobe_screen.dart';
 import '../widgets/custom_navbar.dart';

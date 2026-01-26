@@ -204,7 +204,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
           ],
         ),
         const SizedBox(height: 16),
-        // Display Current Body Shape
         if (authState.bodyShape != null) ...[
           Container(
             padding: const EdgeInsets.all(16),
@@ -270,7 +269,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   }
 
   String _formatBodyShape(String shape) {
-    // Example: body_shape_1.png -> Type 1
     final name = shape.split('.').first;
     final parts = name.split('_');
     if (parts.length >= 3) {
@@ -287,23 +285,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
       text: authState.weight?.toString() ?? '',
     );
     String? selectedBodyShape = authState.bodyShape;
-    // Fallback if null, though it shouldn't be if registered correctly
     final gender = authState.gender ?? 'man';
 
     final List<String> shapes = gender == 'man'
         ? [
-            'body_shape_1.png',
-            'body_shape_3.png',
-            'body_shape_4.png',
-            'body_shape_5.png',
-            'body_shape_6.png',
+            'slim.png',
+            'stocky.png',
+            'athletic.png',
+            'average.png',
+            'muscular.png',
           ]
         : [
-            'body_shape_1.png',
-            'body_shape_2.png',
-            'body_shape_3.png',
-            'body_shape_5.png',
-            'body_shape_6.png',
+            'slim.png',
+            'stocky.png',
+            'athletic.png',
+            'average.png',
+            'muscular.png',
           ];
 
     showDialog(
@@ -600,7 +597,7 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
     bool overlapsContent,
   ) {
     return Container(
-      color: AppTheme.bgDark, // Sticky header background
+      color: AppTheme.bgDark,
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: _tabBar,
     );
