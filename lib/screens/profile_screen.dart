@@ -204,6 +204,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
           ],
         ),
         const SizedBox(height: 16),
+        // Display Current Body Shape
         if (authState.bodyShape != null) ...[
           Container(
             padding: const EdgeInsets.all(16),
@@ -269,12 +270,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   }
 
   String _formatBodyShape(String shape) {
+    // Convert filename to display name
     final name = shape.split('.').first;
-    final parts = name.split('_');
-    if (parts.length >= 3) {
-      return 'Type ${parts.last}';
-    }
-    return shape;
+    // Capitalize first letter
+    return name[0].toUpperCase() + name.substring(1);
   }
 
   void _showEditProfileDialog(BuildContext context, AuthState authState) {
@@ -285,23 +284,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
       text: authState.weight?.toString() ?? '',
     );
     String? selectedBodyShape = authState.bodyShape;
+    // Fallback if null, though it shouldn't be if registered correctly
     final gender = authState.gender ?? 'man';
 
     final List<String> shapes = gender == 'man'
-        ? [
-            'slim.png',
-            'stocky.png',
-            'athletic.png',
-            'average.png',
-            'muscular.png',
-          ]
-        : [
-            'slim.png',
-            'stocky.png',
-            'athletic.png',
-            'average.png',
-            'muscular.png',
-          ];
+        ? ['slim.png', 'round.png', 'normal.png', 'skinny.png', 'athletic.png']
+        : ['slim.png', 'normal.png', 'round.png', 'curvy.png', 'average.png'];
 
     showDialog(
       context: context,
@@ -395,7 +383,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    'Type ${index + 1}',
+                                    _formatBodyShape(shape),
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: isSelected
@@ -597,7 +585,7 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
     bool overlapsContent,
   ) {
     return Container(
-      color: AppTheme.bgDark,
+      color: AppTheme.bgDark, // Sticky header background
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: _tabBar,
     );

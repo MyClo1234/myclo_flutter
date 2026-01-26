@@ -8,10 +8,11 @@ import '../services/api_service.dart';
 
 class LocalWeatherState {
   final DailyWeather? weather;
-  final String?
-  cityName; // Now comes from backend response if added to model, or we can parse it from response message or region field
+  final String? cityName;
+  final double? lat;
+  final double? lon;
 
-  LocalWeatherState({this.weather, this.cityName});
+  LocalWeatherState({this.weather, this.cityName, this.lat, this.lon});
 }
 
 final weatherProvider =
@@ -54,6 +55,8 @@ class WeatherNotifier extends StateNotifier<AsyncValue<LocalWeatherState>> {
         LocalWeatherState(
           weather: weather,
           cityName: weather.region ?? weather.message,
+          lat: position.latitude,
+          lon: position.longitude,
         ),
       );
     } catch (e, st) {
