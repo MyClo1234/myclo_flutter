@@ -91,9 +91,6 @@ class ChatNotifier extends StateNotifier<ChatState> {
       // Text response
       newMessages.add(ChatMessage(text: botResponse, isUser: false));
 
-      // Text response
-      newMessages.add(ChatMessage(text: botResponse, isUser: false));
-
       state = state.copyWith(
         messages: [...state.messages, ...newMessages],
         isLoading: false,

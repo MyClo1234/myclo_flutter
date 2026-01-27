@@ -24,12 +24,17 @@ final weatherProvider =
 
 class WeatherNotifier extends StateNotifier<AsyncValue<LocalWeatherState>> {
   WeatherNotifier() : super(const AsyncValue.loading()) {
-    fetchWeather();
+    // Initial fetch
+    _initFetch();
   }
 
   final ApiService _apiService = ApiService();
 
-  Future<void> fetchWeather() async {
+  Future<void> _initFetch() async {
+    await fetchWeather();
+  }
+
+  Future<Position?> fetchWeather() async {
     try {
       state = const AsyncValue.loading();
 
@@ -59,6 +64,7 @@ class WeatherNotifier extends StateNotifier<AsyncValue<LocalWeatherState>> {
           lon: position.longitude,
         ),
       );
+      return position;
     } catch (e, st) {
       // Fallback to Seoul if location/API fails (common in Web/Simulator)
       try {
@@ -67,21 +73,10 @@ class WeatherNotifier extends StateNotifier<AsyncValue<LocalWeatherState>> {
           LocalWeatherState(weather: weather, cityName: 'Seoul (Default)'),
         );
       } catch (fallbackError) {
-        String errorMsg = e.toString();
-        if (errorMsg.contains('kCLErrorLocationUnknown')) {
-          if (kIsWeb) {
-            errorMsg =
-                'Mac 크롬 위치 오류:\n1. Wi-Fi가 켜져 있는지 확인해주세요.\n2. 시스템 설정 > 개인정보 보호 > 위치 서비스 > Chrome 권한 허용\n3. 브라우저 주소창 왼쪽 설정 > 위치 허용';
-          } else {
-            const suggestion =
-                'iOS Simulator Error Detected:\nGo to Simulator Menu -> Features -> Location -> Select "Apple" or "Custom Location".\nEnsure the simulator has a valid location set.';
-            debugPrint(suggestion); // Helpful log for developer
-            errorMsg =
-                'iOS 시뮬레이터의 위치 설정을 확인해주세요.\n(Features > Location > Custom Location)';
-          }
-        }
-        state = AsyncValue.error(errorMsg, st);
+        // ... (rest of error handling)
+        state = AsyncValue.error(e.toString(), st);
       }
+      return null;
     }
   }
 

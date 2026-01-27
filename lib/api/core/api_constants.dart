@@ -1,10 +1,12 @@
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 class ApiConstants {
-  static const String baseUrlLocal =
-      'https://codify-functions-backend-gzaydqgch0ccbdfe.koreacentral-01.azurewebsites.net';
-  static const String baseUrlAndroid =
-      'https://codify-functions-backend-gzaydqgch0ccbdfe.koreacentral-01.azurewebsites.net';
-  static const String baseUrlProd =
-      'https://codify-functions-backend-gzaydqgch0ccbdfe.koreacentral-01.azurewebsites.net';
+  static String get baseUrlLocal =>
+      dotenv.get('API_BASE_URL', fallback: 'http://localhost:7071');
+  static String get baseUrlAndroid =>
+      dotenv.get('API_BASE_URL', fallback: 'http://10.0.2.2:7071');
+  static String get baseUrlProd =>
+      dotenv.get('API_BASE_URL', fallback: 'https://api.myclo.com');
 
   static const String tokenKey = 'auth_token';
 

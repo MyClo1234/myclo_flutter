@@ -43,87 +43,89 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     final initial = username.isNotEmpty ? username[0].toUpperCase() : 'U';
 
     return Scaffold(
-      body: NestedScrollView(
-        headerSliverBuilder: (context, innerBoxIsScrolled) {
-          return [
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.only(
-                  top: 60,
-                  left: 24,
-                  right: 24,
-                  bottom: 24,
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 80,
-                      height: 80,
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [AppTheme.primary, AppTheme.accent],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
+      body: SafeArea(
+        child: NestedScrollView(
+          headerSliverBuilder: (context, innerBoxIsScrolled) {
+            return [
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.only(
+                    top: 24,
+                    left: 24,
+                    right: 24,
+                    bottom: 24,
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 80,
+                        height: 80,
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [AppTheme.primary, AppTheme.accent],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          shape: BoxShape.circle,
                         ),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Center(
-                        child: Text(
-                          initial,
-                          style: const TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
+                        child: Center(
+                          child: Text(
+                            initial,
+                            style: const TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 16),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          username,
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
+                      const SizedBox(width: 16),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            username,
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                        Text(
-                          'Premium Member',
-                          style: TextStyle(color: AppTheme.textMuted),
-                        ),
-                      ],
-                    ),
-                  ],
+                          Text(
+                            'Premium Member',
+                            style: TextStyle(color: AppTheme.textMuted),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            SliverPersistentHeader(
-              delegate: _SliverAppBarDelegate(
-                TabBar(
-                  controller: _tabController,
-                  isScrollable: true,
-                  indicatorColor: Colors.transparent,
-                  dividerColor: Colors.transparent,
-                  labelPadding: const EdgeInsets.symmetric(horizontal: 4),
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  tabs: _tabs.map((tab) => _buildTab(tab)).toList(),
+              SliverPersistentHeader(
+                delegate: _SliverAppBarDelegate(
+                  TabBar(
+                    controller: _tabController,
+                    isScrollable: true,
+                    indicatorColor: Colors.transparent,
+                    dividerColor: Colors.transparent,
+                    labelPadding: const EdgeInsets.symmetric(horizontal: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    tabs: _tabs.map((tab) => _buildTab(tab)).toList(),
+                  ),
                 ),
+                pinned: true,
               ),
-              pinned: true,
+            ];
+          },
+          body: ResponsiveWrapper(
+            maxWidth: 1200,
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildProfileTab(),
+                _buildCalendarTab(),
+                _buildSettingsTab(),
+              ],
             ),
-          ];
-        },
-        body: ResponsiveWrapper(
-          maxWidth: 1200,
-          child: TabBarView(
-            controller: _tabController,
-            children: [
-              _buildProfileTab(),
-              _buildCalendarTab(),
-              _buildSettingsTab(),
-            ],
           ),
         ),
       ),

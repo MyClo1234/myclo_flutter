@@ -1,9 +1,9 @@
 trigger:
-- main
-- dev
+  - main
+  - dev
 
 pool:
-  name: 'codify-self-host-ci-cd'
+  name: "codify-self-host-ci-cd"
 
 steps:
   - checkout: self
@@ -46,6 +46,17 @@ steps:
       script: |
         set -e
         "$HOME/flutter/bin/flutter" pub get
+
+  # 2.5) .env 파일 생성
+  - task: Bash@3
+    displayName: "Create .env file"
+    env:
+      API_BASE_URL: $(API_BASE_URL)
+    inputs:
+      targetType: "inline"
+      script: |
+        echo "API_BASE_URL=$API_BASE_URL" > .env
+        echo ".env file created with API_BASE_URL"
 
   # 3) 웹 빌드 (결과: build/web)
   - task: Bash@3

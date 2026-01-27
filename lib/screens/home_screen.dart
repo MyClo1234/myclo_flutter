@@ -25,13 +25,11 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   final TextEditingController _chatController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  bool _showStyleOverlay = false;
 
   @override
   void initState() {
     super.initState();
-    // Initial fetch handled by provider build or can be triggered here
-    // ref.read(recommendationProvider.notifier).refresh(); // optional
-    // Weather fetch is auto-triggered by provider initialization, but can be manual if needed
   }
 
   void _handleSend() {
@@ -60,22 +58,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final isWeb = ResponsiveHelper.isWeb(context);
 
     return Scaffold(
-      body: Stack(
-        children: [
-          CustomScrollView(
-            slivers: [
-              SliverToBoxAdapter(
-                child: ResponsiveWrapper(
-                  maxWidth: 1200,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 60, 24, 24),
-                    child: isWeb ? _buildWebLayout() : _buildMobileLayout(),
+      body: SafeArea(
+        child: Stack(
+          children: [
+            CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: ResponsiveWrapper(
+                    maxWidth: 1200,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                      child: isWeb ? _buildWebLayout() : _buildMobileLayout(),
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -86,10 +86,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       children: [
         _buildHeader(),
         const SizedBox(height: 32),
-        _buildInfoCards().animate().scale(delay: 200.ms, duration: 400.ms),
-        const SizedBox(height: 32),
         _buildTodaysPick(),
         const SizedBox(height: 32),
+        _buildInfoCards().animate().scale(delay: 200.ms, duration: 400.ms),
         _buildChatSection(),
         const SizedBox(height: 100),
       ],
@@ -107,11 +106,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             children: [
               _buildHeader(),
               const SizedBox(height: 32),
-              _buildInfoCards().animate().scale(
-                delay: 200.ms,
-                duration: 400.ms,
-              ),
-              const SizedBox(height: 32),
               _buildTodaysPick(),
             ],
           ),
@@ -122,6 +116,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           child: Column(
             children: [
               const SizedBox(height: 100), // Align with header-ish
+              _buildInfoCards().animate().scale(
+                delay: 200.ms,
+                duration: 400.ms,
+              ),
+              const SizedBox(height: 24),
               _buildChatSection(),
             ],
           ),
@@ -136,20 +135,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Good Morning,',
-          style: Theme.of(context).textTheme.headlineMedium,
-        ).animate().fadeIn().moveY(begin: 10, end: 0, duration: 400.ms),
-        Text(
-          '${authState.username ?? 'User'}.',
-          style: Theme.of(
-            context,
-          ).textTheme.headlineMedium?.copyWith(color: AppTheme.primary),
-        ).animate().fadeIn().moveY(
-          begin: 10,
-          end: 0,
-          delay: 100.ms,
-          duration: 400.ms,
+        Wrap(
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Text(
+              'Good Morning, ',
+              style: Theme.of(context).textTheme.headlineMedium,
+            ).animate().fadeIn().moveY(begin: 10, end: 0, duration: 400.ms),
+            Text(
+              '${authState.username ?? 'User'}.',
+              style: Theme.of(
+                context,
+              ).textTheme.headlineMedium?.copyWith(color: AppTheme.primary),
+            ).animate().fadeIn().moveY(
+              begin: 10,
+              end: 0,
+              delay: 100.ms,
+              duration: 400.ms,
+            ),
+          ],
         ),
         const SizedBox(height: 8),
         Text(
@@ -165,150 +169,103 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget _buildInfoCards() {
     final weatherState = ref.watch(weatherProvider);
 
-    return Row(
-      children: [
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            height: 110,
-            decoration: BoxDecoration(
-              color: AppTheme.bgCard.withOpacity(0.5),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppTheme.borderLight),
-            ),
-            child: weatherState.when(
-              data: (state) {
-                final weather = state.weather;
-                final cityName = state.cityName;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      height: 110,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: AppTheme.bgCard.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.borderLight),
+      ),
+      child: weatherState.when(
+        data: (state) {
+          final weather = state.weather;
+          final cityName = state.cityName;
 
-                if (weather == null) {
-                  return const Center(
-                    child: Text(
-                      'No Data',
-                      style: TextStyle(color: Colors.white54),
-                    ),
-                  );
-                }
-                final icon = getWeatherIcon(weather.rainType);
-                final desc = getWeatherDescription(weather.rainType);
-                final tempRange =
-                    '${weather.minTemp?.round()}° / ${weather.maxTemp?.round()}°';
+          if (weather == null) {
+            return const Center(
+              child: Text('No Data', style: TextStyle(color: Colors.white54)),
+            );
+          }
+          final icon = getWeatherIcon(weather.rainType);
+          final desc = getWeatherDescription(weather.rainType);
+          final tempRange =
+              '${weather.minTemp?.round()}° / ${weather.maxTemp?.round()}°';
 
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Icon(icon, color: Colors.blueAccent),
-                        if (cityName != null)
-                          Text(
-                            cityName,
-                            style: const TextStyle(
-                              color: Colors.blueAccent,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 12,
-                            ),
-                          ),
-                      ],
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          tempRange,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          desc,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppTheme.textMuted,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                );
-              },
-              loading: () => const Center(
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-              error: (err, stack) => Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(LucideIcons.alertCircle, color: Colors.red.shade300),
-                    const SizedBox(height: 8),
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Icon(icon, color: Colors.blueAccent),
+                  if (cityName != null)
                     Text(
-                      err.toString(),
+                      cityName,
                       style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 10,
-                      ),
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    InkWell(
-                      onTap: () {
-                        ref.read(weatherProvider.notifier).fetchWeather();
-                      },
-                      child: const Padding(
-                        padding: EdgeInsets.all(4.0),
-                        child: Icon(
-                          LucideIcons.refreshCcw,
-                          size: 14,
-                          color: Colors.white,
-                        ),
+                        color: Colors.blueAccent,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
                       ),
                     ),
-                  ],
+                ],
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    tempRange,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    desc,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.textMuted,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          );
+        },
+        loading: () =>
+            const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        error: (err, stack) => Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(LucideIcons.alertCircle, color: Colors.red.shade300),
+              const SizedBox(height: 8),
+              Text(
+                err.toString(),
+                style: const TextStyle(color: Colors.white70, fontSize: 10),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              InkWell(
+                onTap: () {
+                  ref.read(weatherProvider.notifier).fetchWeather();
+                },
+                child: const Padding(
+                  padding: EdgeInsets.all(4.0),
+                  child: Icon(
+                    LucideIcons.refreshCcw,
+                    size: 14,
+                    color: Colors.white,
+                  ),
                 ),
               ),
-            ),
+            ],
           ),
         ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            height: 110,
-            decoration: BoxDecoration(
-              color: AppTheme.bgCard.withOpacity(0.5),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppTheme.borderLight),
-            ),
-            child: const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Icon(LucideIcons.calendar, color: AppTheme.accent),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '3 Events',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Text(
-                      'First: 10:00 AM',
-                      style: TextStyle(fontSize: 12, color: AppTheme.textMuted),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 
@@ -347,7 +304,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     (todaysPick.outfit == null &&
                         todaysPick.imageUrl == null)) {
                   return Container(
-                    height: 600,
+                    height: 750,
                     decoration: BoxDecoration(
                       color: AppTheme.bgCard.withOpacity(0.5),
                       borderRadius: BorderRadius.circular(24),
@@ -368,17 +325,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
                 return GestureDetector(
                   onTap: () {
-                    if (outfit != null) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => OutfitDetailScreen(outfit: outfit),
-                        ),
-                      );
-                    }
+                    setState(() {
+                      _showStyleOverlay = !_showStyleOverlay;
+                    });
                   },
                   child: Container(
-                    height: 600,
+                    height: 750,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(24),
                       boxShadow: [
@@ -473,107 +425,158 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 ),
                         ),
 
-                        // Text Overlay
+                        // Dark Scrim Overlay
+                        Positioned.fill(
+                          child: AnimatedOpacity(
+                            duration: const Duration(milliseconds: 300),
+                            opacity: _showStyleOverlay ? 0.6 : 0.0,
+                            child: Container(color: Colors.black),
+                          ),
+                        ),
+
+                        // Text Overlay (Conditional Visibility)
                         Positioned(
                           bottom: 0,
                           left: 0,
                           right: 0,
-                          child: Container(
-                            padding: const EdgeInsets.all(20),
-                            decoration: const BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.bottomCenter,
-                                end: Alignment.topCenter,
-                                colors: [Colors.black87, Colors.transparent],
-                                stops: [0.0, 1.0],
+                          child: AnimatedOpacity(
+                            duration: const Duration(milliseconds: 300),
+                            opacity: _showStyleOverlay ? 1.0 : 0.0,
+                            child: Container(
+                              padding: const EdgeInsets.all(20),
+                              decoration: const BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.bottomCenter,
+                                  end: Alignment.topCenter,
+                                  colors: [Colors.black87, Colors.transparent],
+                                  stops: [0.0, 1.0],
+                                ),
+                                borderRadius: BorderRadius.vertical(
+                                  bottom: Radius.circular(24),
+                                ),
                               ),
-                              borderRadius: BorderRadius.vertical(
-                                bottom: Radius.circular(24),
-                              ),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.05),
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(
-                                      color: Colors.white.withOpacity(0.1),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.05),
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(
+                                        color: Colors.white.withOpacity(0.1),
+                                      ),
                                     ),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        styleDescription,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 18,
-                                        ),
-                                      ),
-                                      // Weather Summary from TodaysPick
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 4,
-                                        ),
-                                        child: Text(
-                                          todaysPick.weatherSummary,
-                                          style: const TextStyle(
-                                            color: AppTheme.primary,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      if (outfit != null)
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        // styleDescription (Always visible when box is open)
                                         Text(
-                                          '${outfit.top.color} & ${outfit.bottom.color}',
+                                          styleDescription,
                                           style: const TextStyle(
-                                            color: Colors.white70,
-                                            fontSize: 14,
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 18,
                                           ),
                                         ),
-                                      if (reasoning != null) ...[
                                         const SizedBox(height: 8),
-                                        Text(
-                                          reasoning,
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
-                                            color: Colors.white54,
-                                            fontSize: 12,
+                                        // Weather Summary from TodaysPick
+                                        Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 4,
+                                          ),
+                                          child: Text(
+                                            todaysPick.weatherSummary,
+                                            style: const TextStyle(
+                                              color: AppTheme.primary,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w500,
+                                            ),
                                           ),
                                         ),
-                                      ],
-                                      const SizedBox(height: 12),
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          const Text(
-                                            'Match Score',
-                                            style: TextStyle(
+                                        const SizedBox(height: 4),
+                                        if (outfit != null)
+                                          Text(
+                                            '${outfit.top.color} & ${outfit.bottom.color}',
+                                            style: const TextStyle(
+                                              color: Colors.white70,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                        if (reasoning != null) ...[
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            reasoning,
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
                                               color: Colors.white54,
                                               fontSize: 12,
                                             ),
                                           ),
-                                          Text(
-                                            '${(score * 100).round()}%',
-                                            style: const TextStyle(
-                                              color: AppTheme.primary,
-                                              fontWeight: FontWeight.bold,
+                                        ],
+                                        const SizedBox(height: 12),
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            const Text(
+                                              'Match Score',
+                                              style: TextStyle(
+                                                color: Colors.white54,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                            Text(
+                                              '${(score * 100).round()}%',
+                                              style: const TextStyle(
+                                                color: AppTheme.primary,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  // Detail Button inside the box
+                                  if (outfit != null)
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: TextButton(
+                                        onPressed: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) =>
+                                                  OutfitDetailScreen(
+                                                    outfit: outfit,
+                                                  ),
+                                            ),
+                                          );
+                                        },
+                                        style: TextButton.styleFrom(
+                                          backgroundColor: AppTheme.primary,
+                                          foregroundColor: Colors.black,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              12,
                                             ),
                                           ),
-                                        ],
+                                        ),
+                                        child: const Text(
+                                          'VIEW DETAILS',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 12,
+                                          ),
+                                        ),
                                       ),
-                                    ],
-                                  ),
-                                ),
-                              ],
+                                    ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
@@ -583,7 +586,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 );
               },
               loading: () => Container(
-                height: 600,
+                height: 750,
                 decoration: BoxDecoration(
                   color: AppTheme.bgCard.withOpacity(0.5),
                   borderRadius: BorderRadius.circular(24),
@@ -593,7 +596,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
               ),
               error: (error, stack) => Container(
-                height: 600,
+                height: 750,
                 decoration: BoxDecoration(
                   color: AppTheme.bgCard.withOpacity(0.5),
                   borderRadius: BorderRadius.circular(24),
@@ -644,7 +647,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
         const SizedBox(height: 16),
         Container(
-          height: 600,
+          height: 638,
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: AppTheme.bgCard.withOpacity(0.5),

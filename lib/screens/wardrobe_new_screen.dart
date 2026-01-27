@@ -94,15 +94,18 @@ class _WardrobeNewScreenState extends ConsumerState<WardrobeNewScreen> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: ResponsiveWrapper(
-        maxWidth: 1000,
-        child: Column(
-          children: [
-            Expanded(
-              child: _files.isEmpty ? _buildEmptyState() : _buildFileList(),
-            ),
-            _buildBottomBar(),
-          ],
+      body: SafeArea(
+        top: false,
+        child: ResponsiveWrapper(
+          maxWidth: 1000,
+          child: Column(
+            children: [
+              Expanded(
+                child: _files.isEmpty ? _buildEmptyState() : _buildFileList(),
+              ),
+              _buildBottomBar(),
+            ],
+          ),
         ),
       ),
     );
@@ -110,32 +113,76 @@ class _WardrobeNewScreenState extends ConsumerState<WardrobeNewScreen> {
 
   Widget _buildEmptyState() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          GestureDetector(
-            onTap: () => _pickImages(ImageSource.gallery),
-            child: Container(
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.05),
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: const Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(LucideIcons.image, size: 48, color: AppTheme.textMuted),
-                  SizedBox(height: 16),
-                  Text(
-                    'Tap to select images',
-                    style: TextStyle(color: AppTheme.textMuted),
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: _buildActionCard(
+                    onTap: () => _pickImages(ImageSource.camera),
+                    icon: LucideIcons.camera,
+                    label: 'Take Photo',
+                    description: 'Directly from camera',
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildActionCard(
+                    onTap: () => _pickImages(ImageSource.gallery),
+                    icon: LucideIcons.image,
+                    label: 'Gallery',
+                    description: 'Pick from album',
+                  ),
+                ),
+              ],
             ),
-          ),
-        ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionCard({
+    required VoidCallback onTap,
+    required IconData icon,
+    required String label,
+    required String description,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 180,
+        decoration: BoxDecoration(
+          color: AppTheme.bgCard,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: AppTheme.borderLight),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppTheme.primary.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 32, color: AppTheme.primary),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              label,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              description,
+              style: const TextStyle(color: AppTheme.textMuted, fontSize: 12),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -277,6 +324,86 @@ class _WardrobeNewScreenState extends ConsumerState<WardrobeNewScreen> {
     );
   }
 
+  void _showAddMoreOptions() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.bgDark,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Add More Items',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _buildOptionItem(
+                      icon: LucideIcons.camera,
+                      label: 'Camera',
+                      onTap: () {
+                        Navigator.pop(context);
+                        _pickImages(ImageSource.camera);
+                      },
+                    ),
+                    _buildOptionItem(
+                      icon: LucideIcons.image,
+                      label: 'Gallery',
+                      onTap: () {
+                        Navigator.pop(context);
+                        _pickImages(ImageSource.gallery);
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildOptionItem({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: SizedBox(
+        width: 100,
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(icon, color: AppTheme.primary, size: 28),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 14, color: Colors.white),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildBottomBar() {
     final completedCount = _files.where((f) => f.status == 'completed').length;
     final allDone =
@@ -294,7 +421,7 @@ class _WardrobeNewScreenState extends ConsumerState<WardrobeNewScreen> {
         children: [
           Expanded(
             child: OutlinedButton.icon(
-              onPressed: () => _pickImages(ImageSource.gallery),
+              onPressed: _showAddMoreOptions,
               icon: const Icon(LucideIcons.plus),
               label: const Text('Add More'),
               style: OutlinedButton.styleFrom(
