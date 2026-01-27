@@ -8,6 +8,28 @@ class AppTheme {
   static const Color textMain = Color(0xFFFAFAFA);
   static const Color textMuted = Color(0xFFA1A1AA);
   static const Color borderLight = Color(0x1AFFFFFF); // 10% white
+  static const Color bgLight = Color(0xFFF4F4F5); // Zinc 100
+  static const Color border = Color(0xFFE4E4E7); // Zinc 200
+
+  // Text Styles
+  static const TextStyle headingMedium = TextStyle(
+    color: bgDark,
+    fontSize: 20,
+    fontWeight: FontWeight.bold,
+    fontFamily: 'Manrope',
+  );
+
+  static const TextStyle bodyLarge = TextStyle(
+    color: bgDark,
+    fontSize: 16,
+    fontFamily: 'Manrope',
+  );
+
+  static const TextStyle bodyMedium = TextStyle(
+    color: bgDark,
+    fontSize: 14,
+    fontFamily: 'Manrope',
+  );
 
   static ThemeData get darkTheme {
     return ThemeData(

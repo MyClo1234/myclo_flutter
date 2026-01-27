@@ -87,17 +87,17 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         final List<String> shapes = _selectedGender == 'man'
             ? [
                 'slim.png',
-                'stocky.png',
+                'round.png',
+                'normal.png',
+                'skinny.png',
                 'athletic.png',
-                'average.png',
-                'muscular.png',
               ]
             : [
                 'slim.png',
-                'stocky.png',
-                'athletic.png',
+                'normal.png',
+                'round.png',
+                'curvy.png',
                 'average.png',
-                'muscular.png',
               ];
         if (_selectedBodyShape == null) {
           _selectedBodyShape = shapes[0];
@@ -352,20 +352,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
   Widget _buildStepBodyShape() {
     final List<String> shapes = _selectedGender == 'man'
-        ? [
-            'slim.png',
-            'stocky.png',
-            'athletic.png',
-            'average.png',
-            'muscular.png',
-          ]
-        : [
-            'slim.png',
-            'stocky.png',
-            'athletic.png',
-            'average.png',
-            'muscular.png',
-          ];
+        ? ['slim.png', 'round.png', 'normal.png', 'skinny.png', 'athletic.png']
+        : ['slim.png', 'normal.png', 'round.png', 'curvy.png', 'average.png'];
 
     final isWeb = ResponsiveHelper.isWeb(context);
 

@@ -1,93 +1,31 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:shared_preferences/shared_preferences.dart';
+import '../api/core/api_client.dart';
+import '../api/modules/auth_api.dart';
+import '../api/modules/wardrobe_api.dart';
+import '../api/modules/weather_api.dart';
+import '../api/modules/user_api.dart';
+import '../api/modules/recommendation_api.dart';
 import '../models/weather_model.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+/// Legacy ApiService acting as a Facade for the new modular API architecture.
+/// This allows existing code to continue working while we migrate to using individual modules.
 class ApiService {
-  static const String _tokenKey = 'auth_token';
+  // Modules
+  final AuthApi _authApi = AuthApi();
+  final WardrobeApi _wardrobeApi = WardrobeApi();
+  final WeatherApi _weatherApi = WeatherApi();
+  final UserApi _userApi = UserApi();
+  final RecommendationApi _recommendationApi = RecommendationApi();
 
-  static String get baseUrl {
-    // Local Development URL
-    // For Android Emulator: http://10.0.2.2:7071
-    // For iOS Simulator / macOS: http://127.0.0.1:7071
-    return 'http://127.0.0.1:7071';
+  // Shared Client for token management access if needed (or use ApiClient singleton)
+  final ApiClient _client = ApiClient();
 
-    // Production URL
-    // return 'https://codify-functions-backend-gzaydqgch0ccbdfe.koreacentral-01.azurewebsites.net';
-
-    // Previous configuration for reference:
-    /*
-    if (kIsWeb) {
-      if (kReleaseMode) {
-        return 'https://codify-functions-backend-gzaydqgch0ccbdfe.koreacentral-01.azurewebsites.net';
-      }
-      return 'http://localhost:7071';
-    } else if (Platform.isAndroid) {
-      return 'http://10.0.2.2:7071';
-    } else {
-      return 'http://localhost:7071';
-    }
-    */
-  }
+  static String get baseUrl => ApiClient().baseUrl;
 
   // --- Auth ---
-
-  Future<Map<String, dynamic>> login(String username, String password) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/api/auth/login'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'username': username, 'password': password}),
-      );
-
-      if (response.statusCode == 200) {
-        // The Swagger says response is "string".
-        // It might be a plain string (token) or a JSON.
-        // We'll try to decode as JSON first, if distinct key exists.
-        // If it's just a string body, use it as token.
-        String token;
-        Map<String, dynamic>? userStr;
-
-        try {
-          final decoded = json.decode(response.body);
-          if (decoded is Map<String, dynamic> && decoded.containsKey('token')) {
-            token = decoded['token'];
-            userStr = decoded['user'];
-          } else if (decoded is String) {
-            token = decoded;
-          } else {
-            // Fallback: assume the body text is the token if it's not a variation of above
-            token = response.body;
-            // Start of string "ey..." for JWT
-            if (!token.startsWith('"') && !token.startsWith('{')) {
-              // raw string
-            } else {
-              // If it was valid json string like '"token"', json.decode handles it.
-              if (decoded is String) token = decoded;
-            }
-          }
-        } catch (e) {
-          // Not JSON, assume raw string
-          token = response.body;
-        }
-
-        await _saveToken(token);
-
-        return {
-          'success': true,
-          'token': token,
-          'user': userStr, // might be null
-        };
-      } else {
-        final body = json.decode(utf8.decode(response.bodyBytes));
-        return {'success': false, 'message': body['detail'] ?? 'Login failed'};
-      }
-    } catch (e) {
-      return {'success': false, 'message': 'Connection error: $e'};
-    }
+  Future<Map<String, dynamic>> login(String username, String password) {
+    return _authApi.login(username, password);
   }
 
   Future<Map<String, dynamic>> register({
@@ -98,147 +36,85 @@ class ApiService {
     required int weight,
     required String gender,
     required String bodyShape,
-  }) async {
-    // ... existing implementation ...
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/api/auth/signup'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'username': username,
-          'password': password,
-          'age': age,
-          'height': height,
-          'weight': weight,
-          'gender': gender,
-          'body_shape': bodyShape,
-        }),
-      );
-      // ... (rest of register)
-
-      if (response.statusCode == 200) {
-        final decoded = json.decode(utf8.decode(response.bodyBytes));
-        if (decoded is Map<String, dynamic>) {
-          final bool success = decoded['success'] ?? false;
-          final String? token = decoded['token'];
-          final Map<String, dynamic>? user = decoded['user'];
-
-          if (success && token != null) {
-            await _saveToken(token);
-            return {'success': true, 'token': token, 'user': user};
-          } else {
-            return {
-              'success': false,
-              'message': 'Registration failed: success=false in response',
-            };
-          }
-        }
-        return {'success': false, 'message': 'Invalid response format'};
-      } else {
-        // ... err handling
-        dynamic body;
-        try {
-          body = json.decode(utf8.decode(response.bodyBytes));
-        } catch (_) {
-          body = response.body;
-        }
-        return {
-          'success': false,
-          'message': body is Map
-              ? (body['detail'] ?? 'Registration failed')
-              : body.toString(),
-        };
-      }
-    } catch (e) {
-      return {'success': false, 'message': 'Connection error: $e'};
-    }
+  }) {
+    return _authApi.register(
+      username: username,
+      password: password,
+      age: age,
+      height: height,
+      weight: weight,
+      gender: gender,
+      bodyShape: bodyShape,
+    );
   }
 
+  Future<void> logout() async {
+    await _authApi.logout();
+    await removeUserData();
+  }
+
+  Future<String?> getToken() => _client.getToken();
+
+  // --- Wardrobe ---
+  Future<Map<String, dynamic>> fetchWardrobeItems({
+    int skip = 0,
+    int limit = 20,
+    String? category,
+  }) {
+    return _wardrobeApi.fetchWardrobeItems(
+      skip: skip,
+      limit: limit,
+      category: category,
+    );
+  }
+
+  Future<Map<String, dynamic>> fetchWardrobeItemDetail(String itemId) {
+    return _wardrobeApi.fetchWardrobeItemDetail(itemId);
+  }
+
+  Future<Map<String, dynamic>> uploadImage(XFile image) {
+    return _wardrobeApi.uploadImage(image);
+  }
+
+  // --- Weather ---
+  Future<DailyWeather> getDailyWeather(double lat, double lon) {
+    return _weatherApi.getDailyWeather(lat, lon);
+  }
+
+  // --- User Profile ---
   Future<Map<String, dynamic>> updateProfile({
     required int height,
     required int weight,
     required String gender,
     required String bodyShape,
-  }) async {
-    try {
-      final token = await getToken();
-      if (token == null) {
-        return {'success': false, 'message': 'No token found'};
-      }
-
-      final response = await http.put(
-        Uri.parse('$baseUrl/api/users/profile'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({
-          'height': height,
-          'weight': weight,
-          'gender': gender,
-          'body_shape': bodyShape,
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        // Returns the updated user object directly according to Swagger
-        return {
-          'success': true,
-          'user': json.decode(utf8.decode(response.bodyBytes)),
-        };
-      } else {
-        dynamic body;
-        try {
-          body = json.decode(utf8.decode(response.bodyBytes));
-        } catch (_) {
-          body = response.body;
-        }
-        return {
-          'success': false,
-          'message': body is Map
-              ? (body['detail'] ?? 'Update failed')
-              : body.toString(),
-        };
-      }
-    } catch (e) {
-      return {'success': false, 'message': 'Connection error: $e'};
-    }
+  }) {
+    return _userApi.updateProfile(
+      height: height,
+      weight: weight,
+      gender: gender,
+      bodyShape: bodyShape,
+    );
   }
 
-  Future<void> logout() async {
-    try {
-      final token = await getToken();
-      if (token != null) {
-        await http.post(
-          Uri.parse('$baseUrl/api/auth/logout'),
-          headers: {'Authorization': 'Bearer $token'},
-        );
-      }
-    } catch (_) {
-      // Ignore errors on logout
-    } finally {
-      await _removeToken();
-      await removeUserData();
-    }
+  // --- Recommendation ---
+  Future<Map<String, dynamic>> fetchRecommendedOutfit({
+    int count = 1,
+    bool useGemini = true,
+  }) {
+    return _recommendationApi.fetchRecommendedOutfit(
+      count: count,
+      useGemini: useGemini,
+    );
   }
 
-  Future<void> _saveToken(String token) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_tokenKey, token);
+  Future<Map<String, dynamic>> fetchTodaysPick({
+    required double lat,
+    required double lon,
+  }) {
+    return _recommendationApi.fetchTodaysPick(lat, lon);
   }
 
-  Future<void> _removeToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_tokenKey);
-  }
-
-  Future<String?> getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_tokenKey);
-  }
-
-  // --- User Data Persistence ---
-
+  // --- Persistence (Keep here for now or move to Refactored Auth/User Repository) ---
   Future<void> saveUserData(Map<String, dynamic> user) async {
     final prefs = await SharedPreferences.getInstance();
     if (user['username'] != null)
@@ -279,179 +155,4 @@ class ApiService {
     await prefs.remove('user_height');
     await prefs.remove('user_weight');
   }
-
-  // --- Wardrobe / Features ---
-
-  Future<Map<String, dynamic>> fetchRecommendedOutfit({
-    int count = 1,
-    bool useGemini = true,
-  }) async {
-    try {
-      final token = await getToken();
-      final response = await http.get(
-        Uri.parse(
-          '$baseUrl/api/recommend/outfit?count=$count&use_gemini=$useGemini',
-        ),
-        headers: token != null ? {'Authorization': 'Bearer $token'} : {},
-      );
-
-      if (response.statusCode == 200) {
-        return json.decode(utf8.decode(response.bodyBytes));
-      } else {
-        throw Exception('Failed to load outfit recommendations');
-      }
-    } catch (e) {
-      throw Exception('Failed to connect to server: $e');
-    }
-  }
-
-  Future<Map<String, dynamic>> fetchWardrobeItems({
-    int skip = 0,
-    int limit = 20,
-    String? category, // Optional: for filtering directly from API if needed
-  }) async {
-    try {
-      final token = await getToken();
-
-      // Construct URL with query parameters
-      String url =
-          '$baseUrl/api/wardrobe/users/me/images?skip=$skip&limit=$limit';
-      if (category != null) {
-        url += '&category=$category';
-      }
-
-      final response = await http.get(
-        Uri.parse(url),
-        headers: token != null ? {'Authorization': 'Bearer $token'} : {},
-      );
-
-      if (response.statusCode == 200) {
-        return json.decode(utf8.decode(response.bodyBytes));
-      } else {
-        throw ApiException(
-          response.statusCode,
-          'Failed to load wardrobe items',
-        );
-      }
-    } catch (e) {
-      if (e is ApiException) rethrow; // Pass through ApiException
-      throw Exception('Failed to connect to server: $e');
-    }
-  }
-
-  Future<Map<String, dynamic>> fetchWardrobeItemDetail(String itemId) async {
-    try {
-      final token = await getToken();
-      final url = '$baseUrl/api/wardrobe/items/$itemId';
-
-      final response = await http.get(
-        Uri.parse(url),
-        headers: token != null ? {'Authorization': 'Bearer $token'} : {},
-      );
-
-      if (response.statusCode == 200) {
-        return json.decode(utf8.decode(response.bodyBytes));
-      } else {
-        throw ApiException(response.statusCode, 'Failed to load item detail');
-      }
-    } catch (e) {
-      if (e is ApiException) rethrow;
-      throw Exception('Failed to connect to server: $e');
-    }
-  }
-
-  Future<Map<String, dynamic>> uploadImage(XFile image) async {
-    try {
-      final token = await getToken();
-      var request = http.MultipartRequest(
-        'POST',
-        Uri.parse('$baseUrl/api/extract'),
-      );
-      if (token != null) {
-        request.headers['Authorization'] = 'Bearer $token';
-      }
-
-      final mediaType = _getMediaType(image.name);
-
-      if (kIsWeb) {
-        request.files.add(
-          http.MultipartFile.fromBytes(
-            'image',
-            await image.readAsBytes(),
-            filename: image.name,
-            contentType: mediaType,
-          ),
-        );
-      } else {
-        request.files.add(
-          await http.MultipartFile.fromPath(
-            'image',
-            image.path,
-            contentType: mediaType,
-          ),
-        );
-      }
-
-      var streamedResponse = await request.send();
-      var response = await http.Response.fromStream(streamedResponse);
-
-      if (response.statusCode == 200) {
-        // Response is ExtractionResponse (Map)
-        return json.decode(utf8.decode(response.bodyBytes));
-      } else {
-        final body = utf8.decode(response.bodyBytes);
-        print('Upload failed: ${response.statusCode} - $body');
-        throw ApiException(response.statusCode, 'Failed to upload: $body');
-      }
-    } catch (e) {
-      if (e is ApiException) rethrow;
-      throw Exception('Error uploading image: $e');
-    }
-  }
-
-  Future<DailyWeather> getDailyWeather(double lat, double lon) async {
-    try {
-      final token = await getToken();
-      // Changed to pass lat/lon instead of nx/ny. Backend handles mapping.
-      final url = '$baseUrl/api/today/summary?lat=$lat&lon=$lon';
-
-      final response = await http.get(
-        Uri.parse(url),
-        headers: token != null ? {'Authorization': 'Bearer $token'} : {},
-      );
-
-      if (response.statusCode == 200) {
-        final decoded = json.decode(utf8.decode(response.bodyBytes));
-        return DailyWeather.fromJson(decoded);
-      } else {
-        throw Exception('Failed to load weather data');
-      }
-    } catch (e) {
-      throw Exception('Failed to connect to server: $e');
-    }
-  }
-
-  MediaType _getMediaType(String filename) {
-    final lower = filename.toLowerCase();
-    if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) {
-      return MediaType('image', 'jpeg');
-    } else if (lower.endsWith('.png')) {
-      return MediaType('image', 'png');
-    } else if (lower.endsWith('.gif')) {
-      return MediaType('image', 'gif');
-    } else if (lower.endsWith('.webp')) {
-      return MediaType('image', 'webp');
-    }
-    return MediaType('application', 'octet-stream');
-  }
-}
-
-class ApiException implements Exception {
-  final int statusCode;
-  final String message;
-
-  ApiException(this.statusCode, this.message);
-
-  @override
-  String toString() => 'ApiException: $statusCode, $message';
 }
