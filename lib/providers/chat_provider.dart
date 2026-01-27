@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api/modules/chat_api.dart';
 import 'auth_provider.dart';
+import 'recommendation_provider.dart';
+import 'weather_provider.dart';
 
 class ChatMessage {
   final String text;
@@ -46,7 +48,17 @@ class ChatNotifier extends StateNotifier<ChatState> {
   final ChatApi _api;
   final Ref _ref;
 
-  ChatNotifier(this._api, this._ref) : super(ChatState());
+  ChatNotifier(this._api, this._ref)
+    : super(
+        ChatState(
+          messages: [
+            ChatMessage(
+              text: "안녕하세요! 오늘 어떤 스타일을 찾으시나요? 제가 완벽한 코디를 도와드릴게요.",
+              isUser: false,
+            ),
+          ],
+        ),
+      );
 
   Future<void> sendMessage(String text) async {
     if (text.trim().isEmpty) return;
@@ -63,38 +75,35 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
     try {
       final authState = _ref.read(authProvider);
-      final userId = authState.id;
+      final weatherState = _ref.read(weatherProvider);
 
-      final response = await _api.sendMessage(text, userId);
+      final userId = authState.id;
+      final lat = weatherState.value?.lat;
+      final lon = weatherState.value?.lon;
+
+      final response = await _api.sendMessage(text, userId, lat: lat, lon: lon);
 
       final botResponse = response['response'] as String? ?? 'No response';
       final isPickUpdated = response['is_pick_updated'] as bool? ?? false;
-      // final recommendations = response['recommendations'] as List?;
-      final todaysPick = response['todays_pick'] as Map<String, dynamic>?;
 
       List<ChatMessage> newMessages = [];
 
       // Text response
       newMessages.add(ChatMessage(text: botResponse, isUser: false));
 
-      // Image (Today's Pick) response
-      if (todaysPick != null && todaysPick['image_url'] != null) {
-        newMessages.add(
-          ChatMessage(
-            text: "Here is your Today's Pick!",
-            isUser: false,
-            isImage: true,
-            imageUrl: todaysPick['image_url'],
-            recommendation: todaysPick,
-          ),
-        );
-      }
+      // Text response
+      newMessages.add(ChatMessage(text: botResponse, isUser: false));
 
       state = state.copyWith(
         messages: [...state.messages, ...newMessages],
         isLoading: false,
         isPickUpdated: isPickUpdated,
       );
+
+      // Trigger global recommendation refresh if pick was updated
+      if (isPickUpdated) {
+        _ref.read(recommendationProvider.notifier).refresh();
+      }
     } catch (e) {
       state = state.copyWith(
         messages: [
@@ -108,6 +117,17 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
   void resetPickUpdated() {
     state = state.copyWith(isPickUpdated: false);
+  }
+
+  void clearChat() {
+    state = ChatState(
+      messages: [
+        ChatMessage(
+          text: "안녕하세요! 오늘 어떤 스타일을 찾으시나요? 제가 완벽한 코디를 도와드릴게요.",
+          isUser: false,
+        ),
+      ],
+    );
   }
 }
 

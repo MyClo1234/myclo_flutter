@@ -107,56 +107,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   Widget _buildMessageBubble(ChatMessage message) {
     final isUser = message.isUser;
 
-    if (message.isImage && message.imageUrl != null) {
-      return Align(
-        alignment: Alignment.centerLeft,
-        child: Container(
-          margin: const EdgeInsets.symmetric(vertical: 8),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppTheme.border),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (message.text.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Text(message.text, style: AppTheme.bodyLarge),
-                ),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.network(
-                  message.imageUrl!,
-                  height: 250,
-                  width: 250,
-                  fit: BoxFit.cover,
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return Container(
-                      height: 250,
-                      width: 250,
-                      color: AppTheme.bgDark,
-                      child: const Center(child: CircularProgressIndicator()),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ).animate().fade().scale(),
-      );
-    }
-
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child:
