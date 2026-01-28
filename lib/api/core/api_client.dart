@@ -17,7 +17,7 @@ class ApiClient {
       if (kReleaseMode) {
         return ApiConstants.baseUrlProd;
       }
-      return 'http://localhost:7071';
+      return ApiConstants.baseUrlLocal;
     } else if (Platform.isAndroid) {
       return ApiConstants.baseUrlAndroid;
     } else {
