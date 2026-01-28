@@ -19,10 +19,19 @@ class RecommendationApi {
     }
   }
 
-  Future<Map<String, dynamic>> fetchTodaysPick(double lat, double lon) async {
+  Future<Map<String, dynamic>> fetchTodaysPick(
+    double lat,
+    double lon, {
+    bool forceRegenerate = false,
+  }) async {
     try {
+      // Add query parameter if forceRegenerate is true
+      final endpoint = forceRegenerate
+          ? '${ApiConstants.todaysPick}?force_regenerate=true'
+          : ApiConstants.todaysPick;
+      
       final response = await _client.post(
-        ApiConstants.todaysPick,
+        endpoint,
         body: {'lat': lat, 'lon': lon},
       );
       return json.decode(utf8.decode(response.bodyBytes));

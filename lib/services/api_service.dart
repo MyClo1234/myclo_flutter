@@ -110,8 +110,13 @@ class ApiService {
   Future<Map<String, dynamic>> fetchTodaysPick({
     required double lat,
     required double lon,
+    bool forceRegenerate = false,
   }) {
-    return _recommendationApi.fetchTodaysPick(lat, lon);
+    return _recommendationApi.fetchTodaysPick(
+      lat,
+      lon,
+      forceRegenerate: forceRegenerate,
+    );
   }
 
   // --- Persistence (Keep here for now or move to Refactored Auth/User Repository) ---

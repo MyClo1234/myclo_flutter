@@ -23,10 +23,18 @@ class RecommendationNotifier extends AsyncNotifier<TodaysPick?> {
     return null;
   }
 
-  Future<TodaysPick?> _fetchTodaysPick(double lat, double lon) async {
+  Future<TodaysPick?> _fetchTodaysPick(
+    double lat,
+    double lon, {
+    bool forceRegenerate = false,
+  }) async {
     final api = ref.read(apiServiceProvider);
     try {
-      final data = await api.fetchTodaysPick(lat: lat, lon: lon);
+      final data = await api.fetchTodaysPick(
+        lat: lat,
+        lon: lon,
+        forceRegenerate: forceRegenerate,
+      );
       return TodaysPick.fromJson(data);
     } catch (e) {
       // Handle error or return null
@@ -35,13 +43,17 @@ class RecommendationNotifier extends AsyncNotifier<TodaysPick?> {
     }
   }
 
-  Future<void> refresh() async {
+  Future<void> refresh({bool forceRegenerate = false}) async {
     state = const AsyncValue.loading();
     // We rely on weather provider triggering rebuild or we manually re-fetch if we have location
     final weatherState = ref.read(weatherProvider).value;
     if (weatherState?.lat != null && weatherState?.lon != null) {
       state = await AsyncValue.guard(
-        () => _fetchTodaysPick(weatherState!.lat!, weatherState.lon!),
+        () => _fetchTodaysPick(
+          weatherState!.lat!,
+          weatherState.lon!,
+          forceRegenerate: forceRegenerate,
+        ),
       );
     }
   }

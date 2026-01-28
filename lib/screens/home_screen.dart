@@ -281,9 +281,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
             IconButton(
               onPressed: () {
-                ref.read(recommendationProvider.notifier).refresh();
+                ref.read(recommendationProvider.notifier).refresh(
+                      forceRegenerate: true,
+                    );
               },
-
               icon: const Icon(
                 LucideIcons.refreshCw,
                 size: 16,
@@ -612,7 +613,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ),
                       TextButton(
                         onPressed: () {
-                          ref.read(recommendationProvider.notifier).refresh();
+                          ref.read(recommendationProvider.notifier).refresh(
+                                forceRegenerate: false,
+                              );
                         },
                         child: const Text('Retry'),
                       ),

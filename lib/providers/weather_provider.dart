@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:flutter/material.dart';
+import 'dart:async';
 import '../models/weather_model.dart';
 import '../services/api_service.dart';
 
@@ -86,7 +87,10 @@ class WeatherNotifier extends StateNotifier<AsyncValue<LocalWeatherState>> {
 
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      return Future.error('Location services are disabled.');
+      // On Web, this check can be unreliable; the browser manages location services.
+      if (!kIsWeb) {
+        return Future.error('Location services are disabled.');
+      }
     }
 
     permission = await Geolocator.checkPermission();
@@ -103,12 +107,30 @@ class WeatherNotifier extends StateNotifier<AsyncValue<LocalWeatherState>> {
 
     // Use lower accuracy for faster city-level resolution
     // This often helps with simulator/web compatibility
-    return await Geolocator.getCurrentPosition(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.low,
-        distanceFilter: 1000,
-      ),
+    const settings = LocationSettings(
+      accuracy: LocationAccuracy.low,
+      distanceFilter: 1000,
     );
+
+    // On Web, right after accepting the browser permission prompt, the first
+    // `getCurrentPosition` may not resolve until the tab/window focus changes.
+    // (It can "hang" rather than throw.) We add a timeout + retry sequence.
+    Future<Position> attempt(Duration timeout) =>
+        Geolocator.getCurrentPosition(locationSettings: settings)
+            .timeout(timeout);
+
+    // If permission was just granted, give the browser a moment to apply it.
+    await Future.delayed(const Duration(milliseconds: 200));
+
+    try {
+      return await attempt(const Duration(seconds: 5));
+    } on TimeoutException {
+      await Future.delayed(const Duration(milliseconds: 400));
+      return await attempt(const Duration(seconds: 8));
+    } catch (_) {
+      await Future.delayed(const Duration(milliseconds: 700));
+      return await attempt(const Duration(seconds: 8));
+    }
   }
 }
 
