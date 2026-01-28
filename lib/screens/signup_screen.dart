@@ -5,6 +5,7 @@ import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
 import '../utils/responsive_helper.dart';
 import 'main_wrapper.dart';
+import 'terms/terms_screen.dart';
 
 class SignupScreen extends ConsumerStatefulWidget {
   const SignupScreen({super.key});
@@ -21,6 +22,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   final _idController = TextEditingController();
   final _pwController = TextEditingController();
   final _confirmPwController = TextEditingController();
+  bool _isAgreed = false;
 
   // Step 2: Physical Info (New)
   final _ageController = TextEditingController();
@@ -274,6 +276,42 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
             hint: '다시 한 번 입력하세요',
             isPassword: true,
           ),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              SizedBox(
+                height: 24,
+                width: 24,
+                child: Checkbox(
+                  value: _isAgreed,
+                  activeColor: AppTheme.primary,
+                  checkColor: AppTheme.bgDark,
+                  side: const BorderSide(color: AppTheme.textMuted),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  onChanged: (val) {
+                    setState(() => _isAgreed = val ?? false);
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                '이용약관에 동의합니다',
+                style: TextStyle(color: AppTheme.textMain),
+              ),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.info_outline, color: AppTheme.primary),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const TermsScreen()),
+                  );
+                },
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -426,7 +464,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                           ),
                           child: Center(
                             child: Text(
-                              '체형 ${index + 1}',
+                              _getShapeName(shape),
                               style: TextStyle(
                                 color: isSelected
                                     ? AppTheme.primary
@@ -530,7 +568,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              '체형 ${index + 1}',
+                              _getShapeName(shape),
                               style: TextStyle(
                                 fontSize: 18,
                                 color: isSelected
@@ -586,7 +624,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           ElevatedButton(
-            onPressed: isLoading
+            onPressed:
+                isLoading ||
+                    (_currentStep == 0 && !_isAgreed) // Step 0: Check required
                 ? null
                 : (_currentStep == 3 ? _handleSignup : _nextStep),
             style: ElevatedButton.styleFrom(
@@ -722,5 +762,18 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         ),
       ],
     );
+  }
+
+  String _getShapeName(String filename) {
+    final map = {
+      'slim.png': '슬림',
+      'round.png': '라운드',
+      'normal.png': '노멀',
+      'skinny.png': '스키니',
+      'athletic.png': '애슬레틱',
+      'curvy.png': '커비',
+      'average.png': '에버리지',
+    };
+    return map[filename] ?? filename.replaceAll('.png', '');
   }
 }

@@ -3,8 +3,18 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 class ApiConstants {
   static String get baseUrlLocal =>
       dotenv.get('API_BASE_URL', fallback: 'http://localhost:7071');
-  static String get baseUrlAndroid =>
-      dotenv.get('API_BASE_URL', fallback: 'http://10.0.2.2:7071');
+  static String get baseUrlAndroid {
+    String url = dotenv.get('API_BASE_URL', fallback: 'http://10.0.2.2:7071');
+    // Android Emulator cannot access 'localhost' or '127.0.0.1' directly.
+    // It must use '10.0.2.2'.
+    if (url.contains('localhost')) {
+      url = url.replaceAll('localhost', '10.0.2.2');
+    } else if (url.contains('127.0.0.1')) {
+      url = url.replaceAll('127.0.0.1', '10.0.2.2');
+    }
+    return url;
+  }
+
   static String get baseUrlProd {
     final url = dotenv.get(
       'API_BASE_URL',
