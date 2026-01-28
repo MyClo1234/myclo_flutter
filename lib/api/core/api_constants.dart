@@ -5,8 +5,18 @@ class ApiConstants {
       dotenv.get('API_BASE_URL', fallback: 'http://localhost:7071');
   static String get baseUrlAndroid =>
       dotenv.get('API_BASE_URL', fallback: 'http://10.0.2.2:7071');
-  static String get baseUrlProd =>
-      dotenv.get('API_BASE_URL', fallback: 'https://api.myclo.com');
+  static String get baseUrlProd {
+    final url = dotenv.get(
+      'API_BASE_URL',
+      fallback:
+          'https://codify-functions-backend-gzaydqgch0ccbdfe.koreacentral-01.azurewebsites.net',
+    );
+    // If the variable substitution fails in the pipeline, it returns $(API_BASE_URL)
+    if (url.startsWith(r'$(')) {
+      return 'https://codify-functions-backend-gzaydqgch0ccbdfe.koreacentral-01.azurewebsites.net';
+    }
+    return url;
+  }
 
   static const String tokenKey = 'auth_token';
 
