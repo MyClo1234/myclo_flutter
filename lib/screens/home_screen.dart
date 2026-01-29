@@ -694,22 +694,35 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
               ),
               if (chatState.isLoading)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8.0),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: SizedBox(
-                      width: 40,
-                      height: 20,
-                      child: Center(
-                        child: Text(
-                          '...',
-                          style: TextStyle(color: Colors.white54),
-                        ),
-                      ),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
                     ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(
+                        12,
+                      ).copyWith(topLeft: const Radius.circular(2)),
+                    ),
+                    child:
+                        Text(
+                              "로딩중...",
+                              style: const TextStyle(
+                                color: Colors.white54,
+                                fontSize: 14,
+                              ),
+                            )
+                            .animate(
+                              onPlay: (controller) =>
+                                  controller.repeat(reverse: true),
+                            )
+                            .fade(duration: 800.ms, begin: 0.4, end: 1.0),
                   ),
-                ),
+                ).animate().fade(duration: 200.ms).slideX(begin: -0.1, end: 0),
               const Divider(color: AppTheme.borderLight),
               Row(
                 children: [

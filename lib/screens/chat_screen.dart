@@ -85,12 +85,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   chatState.messages.length + (chatState.isLoading ? 1 : 0),
               itemBuilder: (context, index) {
                 if (index == chatState.messages.length && chatState.isLoading) {
-                  return const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 16),
-                    child: Center(
-                      child: CircularProgressIndicator(color: AppTheme.primary),
-                    ),
-                  );
+                  return _buildLoadingBubble();
                 }
 
                 final message = chatState.messages[index];
@@ -148,6 +143,43 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             end: 0,
             duration: 300.ms,
           ),
+    );
+  }
+
+  Widget _buildLoadingBubble() {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        constraints: const BoxConstraints(maxWidth: 120),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(16),
+            topRight: Radius.circular(16),
+            bottomLeft: Radius.circular(4),
+            bottomRight: Radius.circular(16),
+          ),
+          border: Border.all(color: AppTheme.border),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child:
+            Text(
+                  "로딩중...",
+                  style: AppTheme.bodyLarge.copyWith(color: AppTheme.textMuted),
+                )
+                .animate(
+                  onPlay: (controller) => controller.repeat(reverse: true),
+                )
+                .fade(duration: 800.ms, begin: 0.4, end: 1.0),
+      ).animate().fade(duration: 200.ms).slideX(begin: -0.1, end: 0),
     );
   }
 

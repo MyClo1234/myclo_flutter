@@ -81,7 +81,14 @@ class ChatNotifier extends StateNotifier<ChatState> {
       final lat = weatherState.value?.lat;
       final lon = weatherState.value?.lon;
 
-      final response = await _api.sendMessage(text, userId, lat: lat, lon: lon);
+      // Add a small delay so the loading indicator is visible even with fast responses
+      final minLoadingFuture = Future.delayed(
+        const Duration(milliseconds: 800),
+      );
+      final apiFuture = _api.sendMessage(text, userId, lat: lat, lon: lon);
+
+      final results = await Future.wait([minLoadingFuture, apiFuture]);
+      final response = results[1] as Map<String, dynamic>;
 
       final botResponse = response['response'] as String? ?? 'No response';
       final isPickUpdated = response['is_pick_updated'] as bool? ?? false;
